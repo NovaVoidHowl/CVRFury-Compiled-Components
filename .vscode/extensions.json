@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "maciejdems.add-to-gitignore",
+    "ms-dotnettools.csharp",
+    "streetsidesoftware.code-spell-checker",
+    "csharpier.csharpier-vscode"
+  ]
+}

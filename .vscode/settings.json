@@ -1,0 +1,12 @@
+{
+  "cSpell.words": [
+    "csharpierrc",
+    "mdformat"
+  ],
+  "dotnet.preferCSharpExtension": true,
+  "editor.rulers": [
+    120
+  ],
+  "editor.tabSize": 2,
+  "vscord.enabled": true
+}
