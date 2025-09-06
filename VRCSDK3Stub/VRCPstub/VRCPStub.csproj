@@ -1,17 +1,18 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{615545A9-AA3D-442E-9181-63DA6A8934F7}</ProjectGuid>
+    <ProjectGuid>{58CD0322-9E30-4EEE-888F-0F2FE81E7D05}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>VRC.SDK3.Avatars</RootNamespace>
-    <AssemblyName>VRCAVstub</AssemblyName>
+    <RootNamespace>VRC.Dynamics</RootNamespace>
+    <AssemblyName>VRCPstub</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -33,30 +34,32 @@
     <Reference Include="UnityEngine">
       <HintPath>C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
-    <Reference Include="UnityEditor">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Data\Managed\UnityEditor.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UIElementsModule">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEditor.UIElementsModule">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Data\Managed\UnityEditor.UIElementsModule.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Components\VRCAvatarDescriptor.cs" />
-    <Compile Include="Components\VRCHeadChop.cs" />
-    <Compile Include="Components\VRCSpatialAudioSource.cs" />
+    <Compile Include="CollisionScene.cs" />
+    <Compile Include="ContactBase.cs" />
+    <Compile Include="ContactReceiver.cs" />
+    <Compile Include="ContactSender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ScriptableObjects\VRCExpressionParameters.cs" />
-    <Compile Include="ScriptableObjects\VRCExpressionsMenu.cs" />
-    <Compile Include="Common\StubVersion.cs" />
+    <Compile Include="VRCContactReceiver.cs" />
+    <Compile Include="VRCPhysBoneBase.cs" />
+    <Compile Include="VRCPhysBoneColliderBase.cs" />
+    <Compile Include="ManagedTypes\VRCConstraintBase.cs" />
+    <Compile Include="ManagedTypes\VRCAimConstraintBase.cs" />
+    <Compile Include="ManagedTypes\VRCLookAtConstraintBase.cs" />
+    <Compile Include="ManagedTypes\VRCParentConstraintBase.cs" />
+    <Compile Include="ManagedTypes\VRCPositionConstraintBase.cs" />
+    <Compile Include="ManagedTypes\VRCRotationConstraintBase.cs" />
+    <Compile Include="ManagedTypes\VRCScaleConstraintBase.cs" />
+    <Compile Include="ManagedTypes\VRCWorldUpConstraintBase.cs" />
+    <Compile Include="VRCPstub.enums.cs" />
+    <Compile Include="VRCPstub.structs.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)Build/" /y</PostBuildEvent>
+    <PreBuildEvent>if not exist "$(SolutionDir)Build/" (md "$(SolutionDir)Build/")</PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent>if not exist "$(SolutionDir)Build/" (md "$(SolutionDir)Build/")</PreBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)Build/" /y</PostBuildEvent>
   </PropertyGroup>
 </Project>

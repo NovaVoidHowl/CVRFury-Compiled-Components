@@ -1,0 +1,1 @@
+# VRC pipeline manager stub

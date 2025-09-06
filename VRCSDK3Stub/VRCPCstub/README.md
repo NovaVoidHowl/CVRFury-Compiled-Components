@@ -1,0 +1,1 @@
+# VRC physics collider stub
