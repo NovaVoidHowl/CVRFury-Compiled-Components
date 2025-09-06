@@ -278,28 +278,45 @@ namespace VRC.SDK3.Avatars.Components
             vrcAvatar.customEyeLookSettings.eyelidsBlendshapes != null
             && vrcAvatar.customEyeLookSettings.eyelidsBlendshapes.Length > 0
             && vrcAvatar.VisemeSkinnedMesh != null
+            && vrcAvatar.VisemeSkinnedMesh.sharedMesh != null
           )
           {
             var blinkIndex = vrcAvatar.customEyeLookSettings.eyelidsBlendshapes[0];
-            var blinkBlendshapeName = vrcAvatar.VisemeSkinnedMesh.sharedMesh.GetBlendShapeName(blinkIndex);
-
-            var useBlinkField = cvrAvatarType.GetField("useBlinkBlendshapes");
-            if (useBlinkField != null)
+            
+            // Validate blend shape index is within bounds
+            var mesh = vrcAvatar.VisemeSkinnedMesh.sharedMesh;
+            if (blinkIndex < 0)
             {
-              useBlinkField.SetValue(cvrComponent, true);
+              Debug.Log("No blink blend shape is set in the VRC Avatar Descriptor. Skipping eye blink setup.");
             }
-
-            var blinkArrayField = cvrAvatarType.GetField("blinkBlendshape");
-            if (blinkArrayField != null)
+            else if (blinkIndex >= mesh.blendShapeCount)
             {
-              // Create array with single value if it's a string array
-              var blinkArray = Array.CreateInstance(typeof(string), 4);
-              blinkArray.SetValue(blinkBlendshapeName, 0);
-              // add the other 3 empty slots
-              blinkArray.SetValue("", 1);
-              blinkArray.SetValue("", 2);
-              blinkArray.SetValue("", 3);
-              blinkArrayField.SetValue(cvrComponent, blinkArray);
+              Debug.LogWarning(
+                $"Blend shape index {blinkIndex} is out of range. Mesh has {mesh.blendShapeCount} blend shapes. Skipping eye blink setup."
+              );
+            }
+            else
+            {
+              var blinkBlendshapeName = mesh.GetBlendShapeName(blinkIndex);
+
+              var useBlinkField = cvrAvatarType.GetField("useBlinkBlendshapes");
+              if (useBlinkField != null)
+              {
+                useBlinkField.SetValue(cvrComponent, true);
+              }
+
+              var blinkArrayField = cvrAvatarType.GetField("blinkBlendshape");
+              if (blinkArrayField != null)
+              {
+                // Create array with single value if it's a string array
+                var blinkArray = Array.CreateInstance(typeof(string), 4);
+                blinkArray.SetValue(blinkBlendshapeName, 0);
+                // add the other 3 empty slots
+                blinkArray.SetValue("", 1);
+                blinkArray.SetValue("", 2);
+                blinkArray.SetValue("", 3);
+                blinkArrayField.SetValue(cvrComponent, blinkArray);
+              }
             }
           }
 
