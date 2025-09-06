@@ -282,7 +282,7 @@ namespace VRC.SDK3.Avatars.Components
           )
           {
             var blinkIndex = vrcAvatar.customEyeLookSettings.eyelidsBlendshapes[0];
-            
+
             // Validate blend shape index is within bounds
             var mesh = vrcAvatar.VisemeSkinnedMesh.sharedMesh;
             if (blinkIndex < 0)
