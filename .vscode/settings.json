@@ -1,7 +1,13 @@
 {
   "cSpell.words": [
+    "Behaviour",
     "csharpierrc",
-    "mdformat"
+    "cvrfury",
+    "Mathf",
+    "mdformat",
+    "novavoidhowl",
+    "Scriptable",
+    "VRCAV"
   ],
   "dotnet.preferCSharpExtension": true,
   "editor.rulers": [
