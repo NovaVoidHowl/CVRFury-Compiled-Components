@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
+using UnityEditor.UIElements;
 using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion;
 
 namespace VRC.SDK3.Avatars.ScriptableObjects
@@ -55,6 +57,8 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
   [CustomEditor(typeof(VRCExpressionParameters))]
   public class VRCExpressionParametersEditorStub : Editor
   {
+    private readonly List<RuntimeAnimatorController> selectedAnimators = new List<RuntimeAnimatorController>();
+
     public override VisualElement CreateInspectorGUI()
     {
       var root = new VisualElement();
@@ -107,6 +111,37 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         root.Add(parametersBox);
       }
 
+      // Animator selection section
+      var animatorSection = new Box();
+      animatorSection.style.marginTop = new StyleLength(10);
+      animatorSection.style.marginBottom = new StyleLength(10);
+      animatorSection.style.paddingTop = new StyleLength(6);
+      animatorSection.style.paddingBottom = new StyleLength(6);
+      animatorSection.style.paddingLeft = new StyleLength(6);
+      animatorSection.style.paddingRight = new StyleLength(6);
+      animatorSection.style.backgroundColor = new StyleColor(new Color(0.8f, 1f, 0.8f, 0.2f));
+
+      var animatorLabel = new Label("Animator Controllers to Link:");
+      animatorLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+      animatorLabel.style.marginBottom = new StyleLength(5);
+      animatorSection.Add(animatorLabel);
+
+      var animatorHelpLabel = new Label(
+        "Select RuntimeAnimatorController assets that should be linked to the converted CVRFury Parameters Store:"
+      );
+      animatorHelpLabel.style.fontSize = new StyleLength(11);
+      animatorHelpLabel.style.whiteSpace = WhiteSpace.Normal;
+      animatorHelpLabel.style.marginBottom = new StyleLength(10);
+      animatorSection.Add(animatorHelpLabel);
+
+      // Container for animator list
+      var animatorContainer = new VisualElement();
+      animatorSection.Add(animatorContainer);
+
+      // Method to refresh the animator list display
+      RefreshAnimatorList(animatorContainer);
+      root.Add(animatorSection);
+
       var warningBox = new Box();
       warningBox.style.marginTop = new StyleLength(10);
       warningBox.style.paddingTop = new StyleLength(6);
@@ -116,7 +151,8 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       warningBox.style.backgroundColor = new StyleColor(new Color(1f, 0.8f, 0.8f, 0.3f));
 
       var warningLabel = new Label(
-        "This VRCExpressionParameters file can be converted to CVRFury format. Click the button below to convert it directly."
+        "This VRCExpressionParameters file can be converted to CVRFury format. "
+          + "Select any animator controllers above that should be linked to the converted asset, then click the button below to convert it directly."
       );
       warningLabel.style.whiteSpace = WhiteSpace.Normal;
       warningBox.Add(warningLabel);
@@ -137,11 +173,69 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       return root;
     }
 
+    private void RefreshAnimatorList(VisualElement animatorContainer)
+    {
+      animatorContainer.Clear();
+
+      for (int i = 0; i < selectedAnimators.Count; i++)
+      {
+        var index = i; // Capture for closure
+        var animatorRow = new VisualElement();
+        animatorRow.style.flexDirection = FlexDirection.Row;
+        animatorRow.style.marginBottom = new StyleLength(2);
+
+        var objectField = new ObjectField()
+        {
+          objectType = typeof(RuntimeAnimatorController),
+          value = selectedAnimators[index]
+        };
+        objectField.style.flexGrow = 1;
+
+        objectField.RegisterValueChangedCallback(evt =>
+        {
+          selectedAnimators[index] = evt.newValue as RuntimeAnimatorController;
+        });
+
+        var removeButton = new Button(() =>
+        {
+          selectedAnimators.RemoveAt(index);
+          RefreshAnimatorList(animatorContainer);
+        })
+        {
+          text = "Remove"
+        };
+        removeButton.style.width = new StyleLength(60);
+        removeButton.style.marginLeft = new StyleLength(5);
+
+        animatorRow.Add(objectField);
+        animatorRow.Add(removeButton);
+        animatorContainer.Add(animatorRow);
+      }
+
+      // Add new animator button
+      var addButton = new Button(() =>
+      {
+        selectedAnimators.Add(null);
+        RefreshAnimatorList(animatorContainer);
+      })
+      {
+        text = "Add Animator Controller"
+      };
+      addButton.style.marginTop = new StyleLength(5);
+      animatorContainer.Add(addButton);
+
+      // Show count
+      var countLabel = new Label($"Animators selected: {selectedAnimators.Count}");
+      countLabel.style.fontSize = new StyleLength(11);
+      countLabel.style.marginTop = new StyleLength(5);
+      animatorContainer.Add(countLabel);
+    }
+
     private void ConvertToCVRFury()
     {
       var vrcParameters = (VRCExpressionParameters)target;
       var assetPath = AssetDatabase.GetAssetPath(vrcParameters);
-      
+
       if (string.IsNullOrEmpty(assetPath))
       {
         EditorUtility.DisplayDialog(
@@ -170,7 +264,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         {
           return;
         }
-        
+
         // Delete existing file
         AssetDatabase.DeleteAsset(outputPath);
         AssetDatabase.Refresh();
@@ -196,7 +290,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
         // Create new CVRFury parameters store
         var cvrParametersStore = ScriptableObject.CreateInstance(cvrParametersStoreType);
-        
+
         // Get the parameters field
         var parametersField = cvrParametersStoreType.GetField("parameters");
         if (parametersField == null)
@@ -208,7 +302,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         // Find the Parameter nested type and ValueType enum
         var parameterType = cvrParametersStoreType.GetNestedType("Parameter");
         var valueTypeEnum = cvrParametersStoreType.GetNestedType("ValueType");
-        
+
         if (parameterType == null || valueTypeEnum == null)
         {
           EditorUtility.DisplayDialog(
@@ -223,16 +317,16 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         if (vrcParameters.parameters != null && vrcParameters.parameters.Length > 0)
         {
           var parameterArray = System.Array.CreateInstance(parameterType, vrcParameters.parameters.Length);
-          
+
           for (int i = 0; i < vrcParameters.parameters.Length; i++)
           {
             var vrcParam = vrcParameters.parameters[i];
             var cvrParam = System.Activator.CreateInstance(parameterType);
-            
+
             // Set name
             var nameField = parameterType.GetField("name");
             nameField?.SetValue(cvrParam, vrcParam.name);
-            
+
             // Convert and set value type
             var valueTypeField = parameterType.GetField("valueType");
             if (valueTypeField != null)
@@ -255,14 +349,14 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
               }
               valueTypeField.SetValue(cvrParam, cvrValueType);
             }
-            
+
             // Set default value
             var defaultValueField = parameterType.GetField("defaultValue");
             defaultValueField?.SetValue(cvrParam, vrcParam.defaultValue);
-            
+
             parameterArray.SetValue(cvrParam, i);
           }
-          
+
           parametersField.SetValue(cvrParametersStore, parameterArray);
         }
         else
@@ -274,20 +368,55 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
         // Save the new asset
         AssetDatabase.CreateAsset(cvrParametersStore, outputPath);
+
+        // Try to link animators to the CVRFury parameters store if any are selected
+        if (selectedAnimators.Count > 0)
+        {
+          var validAnimators = selectedAnimators.Where(a => a != null).ToList();
+          if (validAnimators.Count > 0)
+          {
+            // Try to find and set relatedAnimationControllers field
+            var relatedAnimationControllersField = cvrParametersStoreType.GetField("relatedAnimationControllers");
+            if (relatedAnimationControllersField != null)
+            {
+              // Create a List<RuntimeAnimatorController> and populate it
+              var listType = typeof(List<>).MakeGenericType(typeof(RuntimeAnimatorController));
+              var animatorList = System.Activator.CreateInstance(listType);
+              var addMethod = listType.GetMethod("Add");
+
+              foreach (var animator in validAnimators)
+              {
+                addMethod.Invoke(animatorList, new object[] { animator });
+              }
+
+              relatedAnimationControllersField.SetValue(cvrParametersStore, animatorList);
+            }
+          }
+        }
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
         // Show success dialog
         var paramCount = vrcParameters.parameters?.Length ?? 0;
+        var validAnimatorCount = selectedAnimators.Count(a => a != null);
         string message;
-        if (paramCount == 0)
+        if (paramCount == 0 && validAnimatorCount == 0)
         {
           message = "Conversion completed successfully!\n\nAn empty CVRFury Parameters Store has been created.";
         }
         else
         {
-          message =
-            $"Conversion completed successfully!\n\n{paramCount} parameters have been converted to CVRFury format.";
+          var parts = new List<string>();
+          if (paramCount > 0)
+          {
+            parts.Add($"{paramCount} parameters have been converted");
+          }
+          if (validAnimatorCount > 0)
+          {
+            parts.Add($"{validAnimatorCount} animator controllers have been linked");
+          }
+          message = $"Conversion completed successfully!\n\n{string.Join(" and ", parts)} to CVRFury format.";
         }
 
         EditorUtility.DisplayDialog("Conversion Complete", $"{message}\n\nOutput file: {outputPath}", "OK");
