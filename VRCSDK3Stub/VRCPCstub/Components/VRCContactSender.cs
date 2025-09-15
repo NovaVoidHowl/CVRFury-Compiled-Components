@@ -4,7 +4,7 @@ using UnityEditor;
 
 namespace VRC.SDK3.Dynamics.Contact.Components
 {
-  class VRCContactSender : VRC.Dynamics.ContactSender { }
+  public class VRCContactSender : VRC.Dynamics.ContactSender { }
 
   [CustomEditor(typeof(VRCContactSender))]
   public class VRCContactSenderEditorStub : Editor
