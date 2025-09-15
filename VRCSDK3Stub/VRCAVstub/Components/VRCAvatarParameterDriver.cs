@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace uk.novavoidhowl.dev.vrcstub
+namespace VRC.SDK3.Avatars.Components
 {
   public class VRCAvatarParameterDriver : StateMachineBehaviour
   {
