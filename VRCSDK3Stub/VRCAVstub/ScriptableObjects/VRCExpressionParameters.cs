@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
@@ -58,11 +61,185 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
   public class VRCExpressionParametersEditorStub : Editor
   {
     private const string ErrorDialogTitle = "Error";
+
+    // CSS class name constants
+    private const string CSS_STORES_CONTAINER = "stores-container";
+    private const string CSS_STORES_HEADER = "stores-header";
+    private const string CSS_CVR_FURY_BUTTON = "cvr-fury-button";
+    private const string CSS_CVR_FURY_BUTTONS_CONTAINER = "cvr-fury-buttons-container";
+    private const string CSS_PARAMETER_FIELD = "parameter-field";
+    private const string CSS_EMPTY_SLOT = "empty-slot";
+    private const string CSS_SECTION_HEADER = "section-header";
+    private const string CSS_SPACER = "spacer";
+
     private readonly List<RuntimeAnimatorController> selectedAnimators = new List<RuntimeAnimatorController>();
+
+    private static void ApplyCVRFuryStyles(VisualElement root)
+    {
+      try
+      {
+        // First try to load the embedded USS file
+        var styleSheet = LoadEmbeddedStyleSheet();
+        if (styleSheet != null)
+        {
+          root.styleSheets.Add(styleSheet);
+          UnityEngine.Debug.Log("CVRFury embedded stylesheet loaded successfully for VRCExpressionParameters editor");
+        }
+        else
+        {
+          // Fallback: Apply basic styling directly via code
+          ApplyFallbackStyling(root);
+          UnityEngine.Debug.LogWarning("CVRFury embedded stylesheet not found, using fallback styling");
+        }
+
+        // Apply CSS classes to elements
+        root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
+
+        var convertButtons = root.Query<Button>().Where(b => b.text.Contains("Convert")).ToList();
+        foreach (var button in convertButtons)
+        {
+          button.AddToClassList(CSS_CVR_FURY_BUTTON);
+        }
+
+        var storesContainers = root.Query<VisualElement>(className: CSS_STORES_CONTAINER).ToList();
+        foreach (var container in storesContainers)
+        {
+          container.AddToClassList(CSS_STORES_CONTAINER);
+        }
+
+        var sectionHeaders = root.Query<Label>(className: CSS_SECTION_HEADER).ToList();
+        foreach (var header in sectionHeaders)
+        {
+          header.AddToClassList(CSS_STORES_HEADER);
+        }
+
+        // Apply parameter field styling
+        var parameterFields = root.Query<ObjectField>().ToList();
+        foreach (var field in parameterFields)
+        {
+          field.AddToClassList(CSS_PARAMETER_FIELD);
+
+          // Check if this parameter field should show a warning (empty or missing reference)
+          if (field.value == null)
+          {
+            field.AddToClassList(CSS_EMPTY_SLOT);
+          }
+        }
+      }
+      catch (System.Exception e)
+      {
+        UnityEngine.Debug.LogError($"Error applying CVRFury styles: {e.Message}");
+        ApplyFallbackStyling(root);
+      }
+    }
+
+    private static StyleSheet LoadEmbeddedStyleSheet()
+    {
+      try
+      {
+        var assembly = Assembly.GetExecutingAssembly();
+        const string resourceName = "VRC.SDK3.Avatars.Resources.CVRFuryStubs.uss";
+
+        using (var stream = assembly.GetManifestResourceStream(resourceName))
+        {
+          if (stream == null)
+          {
+            UnityEngine.Debug.LogWarning($"Embedded resource '{resourceName}' not found in assembly");
+            return null;
+          }
+
+          using (var reader = new StreamReader(stream))
+          {
+            var cssContent = reader.ReadToEnd();
+#if DEBUG
+            UnityEngine.Debug.Log($"Successfully read embedded CSS content ({cssContent.Length} characters)");
+#endif
+            // Create a temporary USS file in the project for Unity to load
+            var assetsPath = "Assets/Temp";
+            var tempUssPath = "Assets/Temp/CVRFuryStubs_Runtime.uss";
+
+            // Ensure directory exists
+            if (!AssetDatabase.IsValidFolder(assetsPath))
+            {
+              AssetDatabase.CreateFolder("Assets", "Temp");
+            }
+
+            // Write USS content to project file
+            File.WriteAllText(tempUssPath, cssContent);
+            AssetDatabase.Refresh();
+
+            // Load the StyleSheet
+            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(tempUssPath);
+
+            if (styleSheet != null)
+            {
+#if DEBUG
+              UnityEngine.Debug.Log("Successfully loaded CVRFury stylesheet from embedded resource");
+#endif
+            }
+            else
+            {
+              UnityEngine.Debug.LogWarning("Failed to load stylesheet even after creating temp file");
+            }
+            return styleSheet;
+          }
+        }
+      }
+      catch (System.Exception e)
+      {
+        UnityEngine.Debug.LogError($"Error loading embedded stylesheet: {e.Message}");
+        return null;
+      }
+    }
+
+    private static void ApplyFallbackStyling(VisualElement root)
+    {
+      // Apply basic styling directly to elements as fallback
+      var convertButtons = root.Query<Button>().Where(b => b.text.Contains("Convert")).ToList();
+#pragma warning disable S3267 // Loop should be simplified by calling Select
+      foreach (var button in convertButtons)
+      {
+        button.style.marginTop = new StyleLength(5);
+        button.style.marginBottom = new StyleLength(5);
+        button.style.paddingTop = new StyleLength(8);
+        button.style.paddingBottom = new StyleLength(8);
+        button.style.backgroundColor = new StyleColor(new Color(0.267f, 0.267f, 0.267f, 1f)); // #444444
+        button.style.borderTopWidth = new StyleFloat(1);
+        button.style.borderBottomWidth = new StyleFloat(1);
+        button.style.borderLeftWidth = new StyleFloat(1);
+        button.style.borderRightWidth = new StyleFloat(1);
+        button.style.borderTopColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f)); // #646464
+        button.style.borderBottomColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f));
+        button.style.borderLeftColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f));
+        button.style.borderRightColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f));
+        button.style.borderTopLeftRadius = new StyleLength(3);
+        button.style.borderTopRightRadius = new StyleLength(3);
+        button.style.borderBottomLeftRadius = new StyleLength(3);
+        button.style.borderBottomRightRadius = new StyleLength(3);
+      }
+#pragma warning restore S3267
+
+      // Apply container styling
+      var containers = root.Query<VisualElement>(className: CSS_STORES_CONTAINER).ToList();
+#pragma warning disable S3267 // Loop should be simplified by calling Select
+      foreach (var container in containers)
+      {
+        container.style.marginBottom = new StyleLength(10);
+        container.style.paddingTop = new StyleLength(10);
+        container.style.paddingBottom = new StyleLength(10);
+        container.style.paddingLeft = new StyleLength(10);
+        container.style.paddingRight = new StyleLength(10);
+        container.style.backgroundColor = new StyleColor(new Color(0.188f, 0.188f, 0.188f, 1f)); // #303030
+        container.style.borderTopLeftRadius = new StyleLength(12);
+        container.style.borderTopRightRadius = new StyleLength(12);
+      }
+#pragma warning restore S3267
+    }
 
     public override VisualElement CreateInspectorGUI()
     {
       var root = new VisualElement();
+      root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
 
       var versionLabel = new Label($"Stub Version: {((VRCExpressionParameters)target).StubVersion}");
       versionLabel.style.marginBottom = new StyleLength(10);
@@ -77,16 +254,11 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       // Show parameters list for preview
       if (vrcParameters.parameters != null && vrcParameters.parameters.Length > 0)
       {
-        var parametersBox = new Box();
-        parametersBox.style.marginBottom = new StyleLength(10);
-        parametersBox.style.paddingTop = new StyleLength(6);
-        parametersBox.style.paddingBottom = new StyleLength(6);
-        parametersBox.style.paddingLeft = new StyleLength(6);
-        parametersBox.style.paddingRight = new StyleLength(6);
-        parametersBox.style.backgroundColor = new StyleColor(new Color(0.8f, 0.8f, 1f, 0.2f));
+        var parametersBox = new VisualElement();
+        parametersBox.AddToClassList("parameters-list");
 
         var parametersLabel = new Label("Parameters List:");
-        parametersLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+        parametersLabel.AddToClassList(CSS_SECTION_HEADER);
         parametersBox.Add(parametersLabel);
 
         var scrollView = new ScrollView();
@@ -96,6 +268,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         {
           var param = vrcParameters.parameters[i];
           var paramLabel = new Label($"• {param.name} ({param.valueType}) = {param.defaultValue}");
+          paramLabel.AddToClassList("parameter-item");
           paramLabel.style.fontSize = new StyleLength(11);
           scrollView.Add(paramLabel);
         }
@@ -105,18 +278,11 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
 
       // Animator selection section
-      var animatorSection = new Box();
-      animatorSection.style.marginTop = new StyleLength(10);
-      animatorSection.style.marginBottom = new StyleLength(10);
-      animatorSection.style.paddingTop = new StyleLength(6);
-      animatorSection.style.paddingBottom = new StyleLength(6);
-      animatorSection.style.paddingLeft = new StyleLength(6);
-      animatorSection.style.paddingRight = new StyleLength(6);
-      animatorSection.style.backgroundColor = new StyleColor(new Color(0.8f, 1f, 0.8f, 0.2f));
+      var animatorSection = new VisualElement();
+      animatorSection.AddToClassList(CSS_STORES_CONTAINER);
 
       var animatorLabel = new Label("Animator Controllers to Link:");
-      animatorLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-      animatorLabel.style.marginBottom = new StyleLength(5);
+      animatorLabel.AddToClassList(CSS_STORES_HEADER);
       animatorSection.Add(animatorLabel);
 
       var animatorHelpLabel = new Label(
@@ -134,6 +300,11 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       // Method to refresh the animator list display
       RefreshAnimatorList(animatorContainer);
       root.Add(animatorSection);
+
+      // Add spacer
+      var spacer = new VisualElement();
+      spacer.AddToClassList(CSS_SPACER);
+      root.Add(spacer);
 
       var warningBox = new Box();
       warningBox.style.marginTop = new StyleLength(10);
@@ -157,11 +328,13 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       {
         text = "Convert to CVRFury Parameters Store"
       };
-      convertButton.style.marginTop = new StyleLength(10);
-      convertButton.style.height = new StyleLength(30);
+      convertButton.AddToClassList(CSS_CVR_FURY_BUTTON);
 
       root.Add(warningBox);
       root.Add(convertButton);
+
+      // Apply styling after all UI elements are created
+      ApplyCVRFuryStyles(root);
 
       return root;
     }
@@ -182,6 +355,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           objectType = typeof(RuntimeAnimatorController),
           value = selectedAnimators[index]
         };
+        objectField.AddToClassList(CSS_PARAMETER_FIELD);
         objectField.style.flexGrow = 1;
 
         objectField.RegisterValueChangedCallback(evt =>
@@ -214,7 +388,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       {
         text = "Add Animator Controller"
       };
-      addButton.style.marginTop = new StyleLength(5);
+      addButton.AddToClassList(CSS_CVR_FURY_BUTTON);
       animatorContainer.Add(addButton);
 
       // Show count
@@ -229,7 +403,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       var vrcParameters = (VRCExpressionParameters)target;
       var assetPath = AssetDatabase.GetAssetPath(vrcParameters);
 
-      if (!ValidateAssetPath(assetPath) || !ConfirmAnimatorSelection())
+      if (!ValidateAssetPath(assetPath) || !CheckParametersAndWarn())
       {
         return;
       }
@@ -290,6 +464,63 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         return false;
       }
       return true;
+    }
+
+    private bool CheckParametersAndWarn()
+    {
+      var vrcParameters = (VRCExpressionParameters)target;
+      var issues = new List<string>();
+
+      // Check if parameters array is null or empty
+      if (vrcParameters.parameters == null || vrcParameters.parameters.Length == 0)
+      {
+        issues.Add("No parameters defined in this VRCExpressionParameters asset");
+      }
+      else
+      {
+        // Check for parameters with missing or empty names
+        for (int i = 0; i < vrcParameters.parameters.Length; i++)
+        {
+          var param = vrcParameters.parameters[i];
+          if (param == null)
+          {
+            issues.Add($"Parameter at index {i + 1} is null");
+          }
+          else if (string.IsNullOrEmpty(param.name) || string.IsNullOrWhiteSpace(param.name))
+          {
+            issues.Add($"Parameter at index {i + 1} has no name");
+          }
+        }
+      }
+
+      // Check for missing animator controllers
+      var validAnimatorsCheck = selectedAnimators.Where(a => a != null).ToList();
+      if (validAnimatorsCheck.Count == 0)
+      {
+        issues.Add("No animation controllers selected (parameters may not be usable)");
+      }
+
+      // If there are issues, show a warning dialog
+      if (issues.Count > 0)
+      {
+        var messageBuilder = new StringBuilder("The following issues were found with the parameters:\n\n");
+        foreach (var issue in issues)
+        {
+          messageBuilder.AppendLine($"• {issue}");
+        }
+        messageBuilder.AppendLine(
+          "\nDo you want to continue with the conversion anyway? These issues may cause problems with the converted parameters store."
+        );
+
+        return EditorUtility.DisplayDialog(
+          "Parameter Issues Warning",
+          messageBuilder.ToString(),
+          "Continue Conversion",
+          "Cancel"
+        );
+      }
+
+      return true; // No issues found, proceed
     }
 
     private static string GenerateOutputPath(string assetPath)

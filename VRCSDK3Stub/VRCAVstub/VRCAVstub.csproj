@@ -53,6 +53,9 @@
     <Compile Include="ScriptableObjects\VRCExpressionsMenu.cs" />
     <Compile Include="Common\StubVersion.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\CVRFuryStubs.uss" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)Build/" /y</PostBuildEvent>
