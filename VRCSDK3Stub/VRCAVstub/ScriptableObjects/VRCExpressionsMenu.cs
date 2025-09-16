@@ -103,34 +103,9 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       controlsCountLabel.style.marginBottom = new StyleLength(10);
       root.Add(controlsCountLabel);
 
-      // Show controls preview
-      if (vrcMenu.controls != null && vrcMenu.controls.Count > 0)
-      {
-        var controlsBox = new Box();
-        controlsBox.style.marginBottom = new StyleLength(10);
-        controlsBox.style.paddingTop = new StyleLength(6);
-        controlsBox.style.paddingBottom = new StyleLength(6);
-        controlsBox.style.paddingLeft = new StyleLength(6);
-        controlsBox.style.paddingRight = new StyleLength(6);
-        controlsBox.style.backgroundColor = new StyleColor(new Color(0.8f, 0.8f, 1f, 0.2f));
-
-        var controlsLabel = new Label("Controls List:");
-        controlsLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-        controlsBox.Add(controlsLabel);
-
-        var scrollView = new ScrollView();
-        scrollView.style.maxHeight = new StyleLength(150);
-
-        foreach (var control in vrcMenu.controls)
-        {
-          var controlLabel = new Label($"• {control.name} ({control.type}) - {control.parameter?.name}");
-          controlLabel.style.fontSize = new StyleLength(11);
-          scrollView.Add(controlLabel);
-        }
-
-        controlsBox.Add(scrollView);
-        root.Add(controlsBox);
-      }
+      // Container for controls display - we'll need to refresh this when parameter stores change
+      var controlsDisplayContainer = new VisualElement();
+      root.Add(controlsDisplayContainer);
 
       // Parameter stores selection section
       var parameterStoresSection = new Box();
@@ -159,8 +134,14 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       var parameterStoresContainer = new VisualElement();
       parameterStoresSection.Add(parameterStoresContainer);
 
-      // Method to refresh the parameter stores list display
-      RefreshParameterStoresList(parameterStoresContainer);
+      // Method to refresh both parameter stores list and controls display
+      System.Action refreshAll = () =>
+      {
+        RefreshParameterStoresList(parameterStoresContainer, () => RefreshControlsDisplay(controlsDisplayContainer, vrcMenu));
+        RefreshControlsDisplay(controlsDisplayContainer, vrcMenu);
+      };
+      
+      refreshAll();
       root.Add(parameterStoresSection);
 
       var warningBox = new Box();
@@ -194,7 +175,59 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       return root;
     }
 
-    private void RefreshParameterStoresList(VisualElement parameterStoresContainer)
+    private void RefreshControlsDisplay(VisualElement controlsDisplayContainer, VRCExpressionsMenu vrcMenu)
+    {
+      controlsDisplayContainer.Clear();
+
+      // Show controls list if we have controls
+      if (vrcMenu.controls != null && vrcMenu.controls.Count > 0)
+      {
+        var controlsBox = new Box();
+        controlsBox.style.marginBottom = new StyleLength(10);
+        controlsBox.style.paddingTop = new StyleLength(6);
+        controlsBox.style.paddingBottom = new StyleLength(6);
+        controlsBox.style.paddingLeft = new StyleLength(6);
+        controlsBox.style.paddingRight = new StyleLength(6);
+        controlsBox.style.backgroundColor = new StyleColor(new Color(0.8f, 0.8f, 1f, 0.2f));
+
+        var controlsLabel = new Label("Controls List:");
+        controlsLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+        controlsBox.Add(controlsLabel);
+
+        var scrollView = new ScrollView();
+        scrollView.style.maxHeight = new StyleLength(150);
+
+        // Get parameter info from selected stores to check availability
+        var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
+        var parameterInfo = validParameterStores.Count > 0 ? ExtractParameterInfo(validParameterStores) : new Dictionary<string, System.Tuple<System.Type, object>>();
+
+        foreach (var control in vrcMenu.controls)
+        {
+          var machineName = GetMachineName(control);
+          var hasParameter = !string.IsNullOrEmpty(machineName) && parameterInfo.ContainsKey(machineName);
+          var checkMark = hasParameter ? "✓ " : "✗ ";
+          var controlLabel = new Label($"{checkMark}{control.name} ({control.type}) - {control.parameter?.name}");
+          controlLabel.style.fontSize = new StyleLength(11);
+          
+          // Color coding: green for found parameters, red for missing
+          if (hasParameter)
+          {
+            controlLabel.style.color = new StyleColor(new Color(0.0f, 0.7f, 0.0f, 1.0f)); // Dark green
+          }
+          else
+          {
+            controlLabel.style.color = new StyleColor(new Color(0.8f, 0.2f, 0.2f, 1.0f)); // Dark red
+          }
+          
+          scrollView.Add(controlLabel);
+        }
+
+        controlsBox.Add(scrollView);
+        controlsDisplayContainer.Add(controlsBox);
+      }
+    }
+
+    private void RefreshParameterStoresList(VisualElement parameterStoresContainer, System.Action onChanged = null)
     {
       parameterStoresContainer.Clear();
 
@@ -215,12 +248,14 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         objectField.RegisterValueChangedCallback(evt =>
         {
           selectedParameterStores[index] = evt.newValue as ScriptableObject;
+          onChanged?.Invoke(); // Refresh controls display when parameter store changes
         });
 
         var removeButton = new Button(() =>
         {
           selectedParameterStores.RemoveAt(index);
-          RefreshParameterStoresList(parameterStoresContainer);
+          RefreshParameterStoresList(parameterStoresContainer, onChanged);
+          onChanged?.Invoke(); // Refresh controls display when parameter store is removed
         })
         {
           text = "Remove"
@@ -237,7 +272,8 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       var addButton = new Button(() =>
       {
         selectedParameterStores.Add(null);
-        RefreshParameterStoresList(parameterStoresContainer);
+        RefreshParameterStoresList(parameterStoresContainer, onChanged);
+        onChanged?.Invoke(); // Refresh controls display when parameter store is added
       })
       {
         text = "Add Parameter Store"
