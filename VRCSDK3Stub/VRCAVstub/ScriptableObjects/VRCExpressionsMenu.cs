@@ -89,6 +89,10 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
   {
     private readonly List<ScriptableObject> selectedParameterStores = new List<ScriptableObject>();
 
+    // Constants for field names used in reflection
+    private static readonly string MACHINE_NAME_FIELD = "MachineName";
+    private static readonly string FORCE_MACHINE_NAME_FIELD = "forceMachineName";
+
     public override VisualElement CreateInspectorGUI()
     {
       var root = new VisualElement();
@@ -137,10 +141,13 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       // Method to refresh both parameter stores list and controls display
       System.Action refreshAll = () =>
       {
-        RefreshParameterStoresList(parameterStoresContainer, () => RefreshControlsDisplay(controlsDisplayContainer, vrcMenu));
+        RefreshParameterStoresList(
+          parameterStoresContainer,
+          () => RefreshControlsDisplay(controlsDisplayContainer, vrcMenu)
+        );
         RefreshControlsDisplay(controlsDisplayContainer, vrcMenu);
       };
-      
+
       refreshAll();
       root.Add(parameterStoresSection);
 
@@ -199,7 +206,10 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
         // Get parameter info from selected stores to check availability
         var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
-        var parameterInfo = validParameterStores.Count > 0 ? ExtractParameterInfo(validParameterStores) : new Dictionary<string, System.Tuple<System.Type, object>>();
+        var parameterInfo =
+          validParameterStores.Count > 0
+            ? ExtractParameterInfo(validParameterStores)
+            : new Dictionary<string, System.Tuple<System.Type, object>>();
 
         foreach (var control in vrcMenu.controls)
         {
@@ -208,7 +218,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           var checkMark = hasParameter ? "✓ " : "✗ ";
           var controlLabel = new Label($"{checkMark}{control.name} ({control.type}) - {control.parameter?.name}");
           controlLabel.style.fontSize = new StyleLength(11);
-          
+
           // Color coding: green for found parameters, red for missing
           if (hasParameter)
           {
@@ -218,7 +228,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           {
             controlLabel.style.color = new StyleColor(new Color(0.8f, 0.2f, 0.2f, 1.0f)); // Dark red
           }
-          
+
           scrollView.Add(controlLabel);
         }
 
@@ -293,6 +303,30 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       var vrcMenu = (VRCExpressionsMenu)target;
       var assetPath = AssetDatabase.GetAssetPath(vrcMenu);
 
+      if (!ValidateAssetPath(assetPath))
+        return;
+
+      var outputPath = GenerateOutputPath(assetPath);
+      if (!HandleExistingFile(outputPath))
+        return;
+
+      try
+      {
+        var cvrMenuStoreType = FindCVRFuryMenuStoreType();
+        if (cvrMenuStoreType == null)
+          return;
+
+        var cvrMenuStore = CreateAndConfigureMenuStore(cvrMenuStoreType, vrcMenu);
+        SaveAssetAndShowResult(cvrMenuStore, outputPath, vrcMenu);
+      }
+      catch (System.Exception ex)
+      {
+        HandleConversionError(ex);
+      }
+    }
+
+    private static bool ValidateAssetPath(string assetPath)
+    {
       if (string.IsNullOrEmpty(assetPath))
       {
         EditorUtility.DisplayDialog(
@@ -300,134 +334,162 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           "Cannot convert unsaved asset. Please save the VRCExpressionsMenu asset first.",
           "OK"
         );
-        return;
+        return false;
       }
+      return true;
+    }
 
-      // Generate output path
+    private static string GenerateOutputPath(string assetPath)
+    {
       var filePathWithoutExtension = System.IO.Path.ChangeExtension(assetPath, null);
-      var outputPath = filePathWithoutExtension + ".CVRFury.asset";
+      return filePathWithoutExtension + ".CVRFury.asset";
+    }
 
-      // Check if output file already exists
-      if (System.IO.File.Exists(outputPath))
-      {
-        if (
-          !EditorUtility.DisplayDialog(
-            "File Exists",
-            $"A converted file already exists at:\n{outputPath}\n\nDo you want to overwrite it?",
-            "Yes",
-            "Cancel"
-          )
+    private static bool HandleExistingFile(string outputPath)
+    {
+      if (!System.IO.File.Exists(outputPath))
+        return true;
+
+      if (
+        !EditorUtility.DisplayDialog(
+          "File Exists",
+          $"A converted file already exists at:\n{outputPath}\n\nDo you want to overwrite it?",
+          "Yes",
+          "Cancel"
         )
-        {
-          return;
-        }
-
-        // Delete existing file
-        AssetDatabase.DeleteAsset(outputPath);
-        AssetDatabase.Refresh();
+      )
+      {
+        return false;
       }
 
-      try
+      AssetDatabase.DeleteAsset(outputPath);
+      AssetDatabase.Refresh();
+      return true;
+    }
+
+    private static System.Type FindCVRFuryMenuStoreType()
+    {
+      var cvrMenuStoreType = System.AppDomain.CurrentDomain
+        .GetAssemblies()
+        .SelectMany(a => a.GetTypes())
+        .FirstOrDefault(t => t.Name == "CVRFuryMenuStore");
+
+      if (cvrMenuStoreType == null)
       {
-        // Find CVRFuryMenuStore type
-        var cvrMenuStoreType = System.AppDomain.CurrentDomain
-          .GetAssemblies()
-          .SelectMany(a => a.GetTypes())
-          .FirstOrDefault(t => t.Name == "CVRFuryMenuStore");
-
-        if (cvrMenuStoreType == null)
-        {
-          EditorUtility.DisplayDialog(
-            "Error",
-            "CVRFuryMenuStore type not found. Make sure CVRFury is properly installed.",
-            "OK"
-          );
-          return;
-        }
-
-        // Create new CVRFury menu store
-        var cvrMenuStore = ScriptableObject.CreateInstance(cvrMenuStoreType);
-
-        // Link parameter stores if any are selected
-        var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
-        if (validParameterStores.Count > 0)
-        {
-          var relatedParametersStoresField = cvrMenuStoreType.GetField("relatedParametersStores");
-          if (relatedParametersStoresField != null)
-          {
-            // Create a List and populate it
-            var listType = relatedParametersStoresField.FieldType;
-            var parameterStoresList = System.Activator.CreateInstance(listType);
-            var addMethod = listType.GetMethod("Add");
-
-            foreach (var parameterStore in validParameterStores)
-            {
-              addMethod.Invoke(parameterStoresList, new object[] { parameterStore });
-            }
-
-            relatedParametersStoresField.SetValue(cvrMenuStore, parameterStoresList);
-          }
-        }
-
-        // Convert menu controls to CVRFury format - implementation complete
-        // Convert menu controls if we have both controls and parameter stores
-        if (vrcMenu.controls != null && vrcMenu.controls.Count > 0 && validParameterStores.Count > 0)
-        {
-          ConvertMenuControls(vrcMenu, cvrMenuStore, cvrMenuStoreType, validParameterStores);
-        }
-
-        // Save the new asset
-        AssetDatabase.CreateAsset(cvrMenuStore, outputPath);
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        // Show success dialog
-        var controlCount = vrcMenu.controls?.Count ?? 0;
-        var validStoresCount = validParameterStores.Count;
-        string message;
-        if (controlCount == 0 && validStoresCount == 0)
-        {
-          message = "Conversion completed successfully!\n\nAn empty CVRFury Menu Store has been created.";
-        }
-        else
-        {
-          var parts = new List<string>();
-          if (controlCount > 0)
-          {
-            parts.Add($"{controlCount} menu controls have been converted");
-          }
-          if (validStoresCount > 0)
-          {
-            parts.Add($"{validStoresCount} parameter stores have been linked");
-          }
-          message = $"Conversion completed successfully!\n\n{string.Join(" and ", parts)}.";
-        }
-
-        EditorUtility.DisplayDialog("Conversion Complete", $"{message}\n\nOutput file: {outputPath}", "OK");
-
-        // Select the new asset
-        var newAsset = AssetDatabase.LoadAssetAtPath(outputPath, typeof(ScriptableObject));
-        if (newAsset != null)
-        {
-          EditorGUIUtility.PingObject(newAsset);
-          Selection.activeObject = newAsset;
-        }
+        EditorUtility.DisplayDialog(
+          "Error",
+          "CVRFuryMenuStore type not found. Make sure CVRFury is properly installed.",
+          "OK"
+        );
       }
-      catch (System.Exception ex)
+
+      return cvrMenuStoreType;
+    }
+
+    private ScriptableObject CreateAndConfigureMenuStore(System.Type cvrMenuStoreType, VRCExpressionsMenu vrcMenu)
+    {
+      var cvrMenuStore = ScriptableObject.CreateInstance(cvrMenuStoreType);
+
+      LinkParameterStores(cvrMenuStoreType, cvrMenuStore);
+      ConvertMenuControlsIfNeeded(vrcMenu, cvrMenuStore, cvrMenuStoreType);
+
+      return cvrMenuStore;
+    }
+
+    private void LinkParameterStores(System.Type cvrMenuStoreType, ScriptableObject cvrMenuStore)
+    {
+      var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
+      if (validParameterStores.Count == 0)
+        return;
+
+      var relatedParametersStoresField = cvrMenuStoreType.GetField("relatedParametersStores");
+      if (relatedParametersStoresField == null)
+        return;
+
+      var listType = relatedParametersStoresField.FieldType;
+      var parameterStoresList = System.Activator.CreateInstance(listType);
+      var addMethod = listType.GetMethod("Add");
+
+      foreach (var parameterStore in validParameterStores)
       {
-        EditorUtility.DisplayDialog("Conversion Error", $"An error occurred during conversion:\n\n{ex.Message}", "OK");
-        UnityEngine.Debug.LogError($"VRCExpressionsMenu conversion error: {ex}");
+        addMethod.Invoke(parameterStoresList, new object[] { parameterStore });
+      }
+
+      relatedParametersStoresField.SetValue(cvrMenuStore, parameterStoresList);
+    }
+
+    private void ConvertMenuControlsIfNeeded(
+      VRCExpressionsMenu vrcMenu,
+      ScriptableObject cvrMenuStore,
+      System.Type cvrMenuStoreType
+    )
+    {
+      var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
+      if (vrcMenu.controls != null && vrcMenu.controls.Count > 0 && validParameterStores.Count > 0)
+      {
+        ConvertMenuControls(vrcMenu, cvrMenuStore, cvrMenuStoreType, validParameterStores);
       }
     }
 
+    private void SaveAssetAndShowResult(ScriptableObject cvrMenuStore, string outputPath, VRCExpressionsMenu vrcMenu)
+    {
+      AssetDatabase.CreateAsset(cvrMenuStore, outputPath);
+      AssetDatabase.SaveAssets();
+      AssetDatabase.Refresh();
+
+      var message = BuildSuccessMessage(vrcMenu);
+      EditorUtility.DisplayDialog("Conversion Complete", $"{message}\n\nOutput file: {outputPath}", "OK");
+
+      SelectNewAsset(outputPath);
+    }
+
+    private string BuildSuccessMessage(VRCExpressionsMenu vrcMenu)
+    {
+      var controlCount = vrcMenu.controls?.Count ?? 0;
+      var validStoresCount = selectedParameterStores.Count(s => s != null);
+
+      if (controlCount == 0 && validStoresCount == 0)
+      {
+        return "Conversion completed successfully!\n\nAn empty CVRFury Menu Store has been created.";
+      }
+
+      var parts = new List<string>();
+      if (controlCount > 0)
+      {
+        parts.Add($"{controlCount} menu controls have been converted");
+      }
+      if (validStoresCount > 0)
+      {
+        parts.Add($"{validStoresCount} parameter stores have been linked");
+      }
+
+      return $"Conversion completed successfully!\n\n{string.Join(" and ", parts)}.";
+    }
+
+    private static void SelectNewAsset(string outputPath)
+    {
+      var newAsset = AssetDatabase.LoadAssetAtPath(outputPath, typeof(ScriptableObject));
+      if (newAsset != null)
+      {
+        EditorGUIUtility.PingObject(newAsset);
+        Selection.activeObject = newAsset;
+      }
+    }
+
+    private static void HandleConversionError(System.Exception ex)
+    {
+      EditorUtility.DisplayDialog("Conversion Error", $"An error occurred during conversion:\n\n{ex.Message}", "OK");
+      UnityEngine.Debug.LogError($"VRCExpressionsMenu conversion error: {ex}");
+    }
+
     // Helper class for collecting dropdown parameters
-    private class DropdownCollector
+    private sealed class DropdownCollector
     {
       public string machineName;
       public List<DropdownPair> pairs = new List<DropdownPair>();
     }
 
-    private class DropdownPair
+    private sealed class DropdownPair
     {
       public string name;
       public float value;
@@ -487,7 +549,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
     }
 
-    private Dictionary<string, System.Tuple<System.Type, object>> ExtractParameterInfo(
+    private static Dictionary<string, System.Tuple<System.Type, object>> ExtractParameterInfo(
       List<ScriptableObject> parameterStores
     )
     {
@@ -498,38 +560,75 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         if (store == null)
           continue;
 
-        var storeType = store.GetType();
-        var parametersField = storeType.GetField("parameters");
-        if (parametersField == null)
-          continue;
-
-        var parameters = parametersField.GetValue(store) as System.Array;
-        if (parameters == null)
-          continue;
-
-        foreach (var param in parameters)
-        {
-          if (param == null)
-            continue;
-
-          var paramType = param.GetType();
-          var nameField = paramType.GetField("name");
-          var valueTypeField = paramType.GetField("valueType");
-
-          if (nameField != null && valueTypeField != null)
-          {
-            var paramName = nameField.GetValue(param) as string;
-            var valueType = valueTypeField.GetValue(param);
-
-            if (!string.IsNullOrEmpty(paramName) && !parameterInfo.ContainsKey(paramName))
-            {
-              parameterInfo[paramName] = new System.Tuple<System.Type, object>(valueType.GetType(), valueType);
-            }
-          }
-        }
+        ProcessParameterStore(store, parameterInfo);
       }
 
       return parameterInfo;
+    }
+
+    private static void ProcessParameterStore(
+      ScriptableObject store,
+      Dictionary<string, System.Tuple<System.Type, object>> parameterInfo
+    )
+    {
+      var parameters = GetParametersFromStore(store);
+      if (parameters == null)
+        return;
+
+      foreach (var param in parameters)
+      {
+        ProcessParameter(param, parameterInfo);
+      }
+    }
+
+    private static System.Array GetParametersFromStore(ScriptableObject store)
+    {
+      var storeType = store.GetType();
+      var parametersField = storeType.GetField("parameters");
+
+      return parametersField?.GetValue(store) as System.Array;
+    }
+
+    private static void ProcessParameter(
+      object param,
+      Dictionary<string, System.Tuple<System.Type, object>> parameterInfo
+    )
+    {
+      if (param == null)
+        return;
+
+      var parameterData = ExtractParameterData(param);
+      if (parameterData == null)
+        return;
+
+      var (paramName, valueType) = parameterData.Value;
+      if (ShouldAddParameter(paramName, parameterInfo))
+      {
+        parameterInfo[paramName] = new System.Tuple<System.Type, object>(valueType.GetType(), valueType);
+      }
+    }
+
+    private static (string paramName, object valueType)? ExtractParameterData(object param)
+    {
+      var paramType = param.GetType();
+      var nameField = paramType.GetField("name");
+      var valueTypeField = paramType.GetField("valueType");
+
+      if (nameField == null || valueTypeField == null)
+        return null;
+
+      var paramName = nameField.GetValue(param) as string;
+      var valueType = valueTypeField.GetValue(param);
+
+      return (paramName, valueType);
+    }
+
+    private static bool ShouldAddParameter(
+      string paramName,
+      Dictionary<string, System.Tuple<System.Type, object>> parameterInfo
+    )
+    {
+      return !string.IsNullOrEmpty(paramName) && !parameterInfo.ContainsKey(paramName);
     }
 
     private object ConvertControl(
@@ -552,7 +651,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           return ConvertToggleControl(control, machineName, parameterInfo, dropdownCollectors);
 
         case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
-          return ConvertTwoAxisPuppet(control, machineName);
+          return ConvertTwoAxisPuppet(control);
 
         case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
           return ConvertRadialPuppet(control, machineName);
@@ -599,7 +698,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
     }
 
-    private object ConvertTwoAxisPuppet(VRCExpressionsMenu.Control control, string machineName)
+    private static object ConvertTwoAxisPuppet(VRCExpressionsMenu.Control control)
     {
       if (control.subParameters == null || control.subParameters.Length != 2)
       {
@@ -613,7 +712,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       return CreateTwoDJoystickParameter(control, commonPrefix);
     }
 
-    private object ConvertRadialPuppet(VRCExpressionsMenu.Control control, string machineName)
+    private static object ConvertRadialPuppet(VRCExpressionsMenu.Control control, string machineName)
     {
       return CreateSliderParameter(control, machineName);
     }
@@ -635,7 +734,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       existingCollector.pairs.Add(new DropdownPair { name = control.name.Trim(), value = control.value });
     }
 
-    private object CreateToggleParameter(VRCExpressionsMenu.Control control, string machineName)
+    private static object CreateToggleParameter(VRCExpressionsMenu.Control control, string machineName)
     {
       try
       {
@@ -652,9 +751,11 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
         // Set properties
         SetField(toggleParameter, "name", control.name.Trim());
-        SetField(toggleParameter, "MachineName", machineName);
-        SetField(toggleParameter, "defaultState", control.value == 1f ? 1f : 0f);
-        SetField(toggleParameter, "forceMachineName", true);
+        SetField(toggleParameter, MACHINE_NAME_FIELD, machineName);
+        // Use Math.Abs for floating point comparison instead of exact equality (==)
+        // to avoid precision issues where 1.0f might be stored as 0.9999999f or 1.0000001f
+        SetField(toggleParameter, "defaultState", Math.Abs(control.value - 1f) < 0.0001f ? 1f : 0f);
+        SetField(toggleParameter, FORCE_MACHINE_NAME_FIELD, true);
 
         // Set generateType to Bool
         var generateTypeEnum = toggleParameterType.GetNestedType("GenerateType");
@@ -673,7 +774,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
     }
 
-    private object CreateTwoDJoystickParameter(VRCExpressionsMenu.Control control, string machineName)
+    private static object CreateTwoDJoystickParameter(VRCExpressionsMenu.Control control, string machineName)
     {
       try
       {
@@ -688,8 +789,8 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         var joystickParameter = System.Activator.CreateInstance(joystickType);
 
         SetField(joystickParameter, "name", control.name.Trim());
-        SetField(joystickParameter, "MachineName", machineName);
-        SetField(joystickParameter, "forceMachineName", true);
+        SetField(joystickParameter, MACHINE_NAME_FIELD, machineName);
+        SetField(joystickParameter, FORCE_MACHINE_NAME_FIELD, true);
 
         return joystickParameter;
       }
@@ -700,7 +801,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
     }
 
-    private object CreateSliderParameter(VRCExpressionsMenu.Control control, string machineName)
+    private static object CreateSliderParameter(VRCExpressionsMenu.Control control, string machineName)
     {
       try
       {
@@ -715,8 +816,8 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         var sliderParameter = System.Activator.CreateInstance(sliderType);
 
         SetField(sliderParameter, "name", control.name.Trim());
-        SetField(sliderParameter, "MachineName", machineName);
-        SetField(sliderParameter, "forceMachineName", true);
+        SetField(sliderParameter, MACHINE_NAME_FIELD, machineName);
+        SetField(sliderParameter, FORCE_MACHINE_NAME_FIELD, true);
 
         return sliderParameter;
       }
@@ -727,7 +828,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
     }
 
-    private object CreateDropdownParameter(DropdownCollector collector)
+    private static object CreateDropdownParameter(DropdownCollector collector)
     {
       try
       {
@@ -742,8 +843,8 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         var dropdownParameter = System.Activator.CreateInstance(dropdownType);
 
         SetField(dropdownParameter, "name", collector.machineName);
-        SetField(dropdownParameter, "MachineName", collector.machineName);
-        SetField(dropdownParameter, "forceMachineName", true);
+        SetField(dropdownParameter, MACHINE_NAME_FIELD, collector.machineName);
+        SetField(dropdownParameter, FORCE_MACHINE_NAME_FIELD, true);
 
         // Set generateType to Int (default for dropdowns)
         var generateTypeEnum = dropdownType.GetNestedType("GenerateType");
@@ -790,7 +891,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
     }
 
-    private string GetMachineName(VRCExpressionsMenu.Control control)
+    private static string GetMachineName(VRCExpressionsMenu.Control control)
     {
       // Priority 1: Use parameter name if it exists (this is the actual parameter name used in animators)
       if (control.parameter != null && !string.IsNullOrEmpty(control.parameter.name))
