@@ -229,6 +229,37 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       var vrcParameters = (VRCExpressionParameters)target;
       var assetPath = AssetDatabase.GetAssetPath(vrcParameters);
 
+      if (!ValidateAssetPath(assetPath) || !ConfirmAnimatorSelection())
+      {
+        return;
+      }
+
+      var outputPath = GenerateOutputPath(assetPath);
+      if (!HandleExistingFile(outputPath))
+      {
+        return;
+      }
+
+      try
+      {
+        var cvrParametersStore = CreateCVRParametersStore(vrcParameters);
+        if (cvrParametersStore == null)
+        {
+          return;
+        }
+
+        SaveAssetAndLinkAnimators(cvrParametersStore, outputPath);
+        ShowSuccessDialog(vrcParameters, outputPath);
+      }
+      catch (System.Exception ex)
+      {
+        EditorUtility.DisplayDialog("Conversion Error", $"An error occurred during conversion:\n\n{ex.Message}", "OK");
+        UnityEngine.Debug.LogError($"VRCExpressionParameters conversion error: {ex}");
+      }
+    }
+
+    private static bool ValidateAssetPath(string assetPath)
+    {
       if (string.IsNullOrEmpty(assetPath))
       {
         EditorUtility.DisplayDialog(
@@ -236,10 +267,13 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           "Cannot convert unsaved asset. Please save the VRCExpressionParameters asset first.",
           "OK"
         );
-        return;
+        return false;
       }
+      return true;
+    }
 
-      // Check if no animation controllers are selected and confirm with user
+    private bool ConfirmAnimatorSelection()
+    {
       var validAnimatorsCheck = selectedAnimators.Where(a => a != null).ToList();
       if (
         validAnimatorsCheck.Count == 0
@@ -253,14 +287,19 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         )
       )
       {
-        return;
+        return false;
       }
+      return true;
+    }
 
-      // Generate output path
+    private static string GenerateOutputPath(string assetPath)
+    {
       var filePathWithoutExtension = System.IO.Path.ChangeExtension(assetPath, null);
-      var outputPath = filePathWithoutExtension + ".CVRFury.asset";
+      return filePathWithoutExtension + ".CVRFury.asset";
+    }
 
-      // Check if output file already exists
+    private static bool HandleExistingFile(string outputPath)
+    {
       if (System.IO.File.Exists(outputPath))
       {
         if (
@@ -272,182 +311,224 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           )
         )
         {
-          return;
+          return false;
         }
 
-        // Delete existing file
         AssetDatabase.DeleteAsset(outputPath);
         AssetDatabase.Refresh();
       }
+      return true;
+    }
 
-      try
+    private static ScriptableObject CreateCVRParametersStore(VRCExpressionParameters vrcParameters)
+    {
+      var cvrParametersStoreType = FindCVRParametersStoreType();
+      if (cvrParametersStoreType == null)
       {
-        // Find CVRFuryParametersStore type
-        var cvrParametersStoreType = System.AppDomain.CurrentDomain
-          .GetAssemblies()
-          .SelectMany(a => a.GetTypes())
-          .FirstOrDefault(t => t.Name == "CVRFuryParametersStore");
-
-        if (cvrParametersStoreType == null)
-        {
-          EditorUtility.DisplayDialog(
-            ErrorDialogTitle,
-            "CVRFuryParametersStore type not found. Make sure CVRFury is properly installed.",
-            "OK"
-          );
-          return;
-        }
-
-        // Create new CVRFury parameters store
-        var cvrParametersStore = ScriptableObject.CreateInstance(cvrParametersStoreType);
-
-        // Get the parameters field
-        var parametersField = cvrParametersStoreType.GetField("parameters");
-        if (parametersField == null)
-        {
-          EditorUtility.DisplayDialog(
-            ErrorDialogTitle,
-            "Could not find parameters field in CVRFuryParametersStore.",
-            "OK"
-          );
-          return;
-        }
-
-        // Find the Parameter nested type and ValueType enum
-        var parameterType = cvrParametersStoreType.GetNestedType("Parameter");
-        var valueTypeEnum = cvrParametersStoreType.GetNestedType("ValueType");
-
-        if (parameterType == null || valueTypeEnum == null)
-        {
-          EditorUtility.DisplayDialog(
-            ErrorDialogTitle,
-            "Could not find Parameter type or ValueType enum in CVRFuryParametersStore.",
-            "OK"
-          );
-          return;
-        }
-
-        // Convert parameters
-        if (vrcParameters.parameters != null && vrcParameters.parameters.Length > 0)
-        {
-          var parameterArray = System.Array.CreateInstance(parameterType, vrcParameters.parameters.Length);
-
-          for (int i = 0; i < vrcParameters.parameters.Length; i++)
-          {
-            var vrcParam = vrcParameters.parameters[i];
-            var cvrParam = System.Activator.CreateInstance(parameterType);
-
-            // Set name
-            var nameField = parameterType.GetField("name");
-            nameField?.SetValue(cvrParam, vrcParam.name);
-
-            // Convert and set value type
-            var valueTypeField = parameterType.GetField("valueType");
-            if (valueTypeField != null)
-            {
-              object cvrValueType;
-              switch (vrcParam.valueType)
-              {
-                case VRCExpressionParameters.ValueType.Bool:
-                  cvrValueType = System.Enum.Parse(valueTypeEnum, "Bool");
-                  break;
-                case VRCExpressionParameters.ValueType.Float:
-                  cvrValueType = System.Enum.Parse(valueTypeEnum, "Float");
-                  break;
-                case VRCExpressionParameters.ValueType.Int:
-                  cvrValueType = System.Enum.Parse(valueTypeEnum, "Int");
-                  break;
-                default:
-                  cvrValueType = System.Enum.Parse(valueTypeEnum, "Float");
-                  break;
-              }
-              valueTypeField.SetValue(cvrParam, cvrValueType);
-            }
-
-            // Set default value
-            var defaultValueField = parameterType.GetField("defaultValue");
-            defaultValueField?.SetValue(cvrParam, vrcParam.defaultValue);
-
-            parameterArray.SetValue(cvrParam, i);
-          }
-
-          parametersField.SetValue(cvrParametersStore, parameterArray);
-        }
-        else
-        {
-          // Create empty array
-          var emptyArray = System.Array.CreateInstance(parameterType, 0);
-          parametersField.SetValue(cvrParametersStore, emptyArray);
-        }
-
-        // Save the new asset
-        AssetDatabase.CreateAsset(cvrParametersStore, outputPath);
-
-        // Try to link animators to the CVRFury parameters store if any are selected
-        if (selectedAnimators.Count > 0)
-        {
-          var validAnimators = selectedAnimators.Where(a => a != null).ToList();
-          if (validAnimators.Count > 0)
-          {
-            // Try to find and set relatedAnimationControllers field
-            var relatedAnimationControllersField = cvrParametersStoreType.GetField("relatedAnimationControllers");
-            if (relatedAnimationControllersField != null)
-            {
-              // Create a List<RuntimeAnimatorController> and populate it
-              var listType = typeof(List<>).MakeGenericType(typeof(RuntimeAnimatorController));
-              var animatorList = System.Activator.CreateInstance(listType);
-              var addMethod = listType.GetMethod("Add");
-
-              foreach (var animator in validAnimators)
-              {
-                addMethod.Invoke(animatorList, new object[] { animator });
-              }
-
-              relatedAnimationControllersField.SetValue(cvrParametersStore, animatorList);
-            }
-          }
-        }
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        // Show success dialog
-        var paramCount = vrcParameters.parameters?.Length ?? 0;
-        var validAnimatorCount = selectedAnimators.Count(a => a != null);
-        string message;
-        if (paramCount == 0 && validAnimatorCount == 0)
-        {
-          message = "Conversion completed successfully!\n\nAn empty CVRFury Parameters Store has been created.";
-        }
-        else
-        {
-          var parts = new List<string>();
-          if (paramCount > 0)
-          {
-            parts.Add($"{paramCount} parameters have been converted");
-          }
-          if (validAnimatorCount > 0)
-          {
-            parts.Add($"{validAnimatorCount} animator controllers have been linked");
-          }
-          message = $"Conversion completed successfully!\n\n{string.Join(" and ", parts)} to CVRFury format.";
-        }
-
-        EditorUtility.DisplayDialog("Conversion Complete", $"{message}\n\nOutput file: {outputPath}", "OK");
-
-        // Select the new asset
-        var newAsset = AssetDatabase.LoadAssetAtPath(outputPath, typeof(ScriptableObject));
-        if (newAsset != null)
-        {
-          EditorGUIUtility.PingObject(newAsset);
-          Selection.activeObject = newAsset;
-        }
+        return null;
       }
-      catch (System.Exception ex)
+
+      var cvrParametersStore = ScriptableObject.CreateInstance(cvrParametersStoreType);
+      if (!ConvertParameters(vrcParameters, cvrParametersStore, cvrParametersStoreType))
       {
-        EditorUtility.DisplayDialog("Conversion Error", $"An error occurred during conversion:\n\n{ex.Message}", "OK");
-        UnityEngine.Debug.LogError($"VRCExpressionParameters conversion error: {ex}");
+        return null;
       }
+
+      return cvrParametersStore;
+    }
+
+    private static System.Type FindCVRParametersStoreType()
+    {
+      var cvrParametersStoreType = System.AppDomain.CurrentDomain
+        .GetAssemblies()
+        .SelectMany(a => a.GetTypes())
+        .FirstOrDefault(t => t.Name == "CVRFuryParametersStore");
+
+      if (cvrParametersStoreType == null)
+      {
+        EditorUtility.DisplayDialog(
+          ErrorDialogTitle,
+          "CVRFuryParametersStore type not found. Make sure CVRFury is properly installed.",
+          "OK"
+        );
+      }
+
+      return cvrParametersStoreType;
+    }
+
+    private static bool ConvertParameters(
+      VRCExpressionParameters vrcParameters,
+      ScriptableObject cvrParametersStore,
+      System.Type cvrParametersStoreType
+    )
+    {
+      var parametersField = cvrParametersStoreType.GetField("parameters");
+      if (parametersField == null)
+      {
+        EditorUtility.DisplayDialog(
+          ErrorDialogTitle,
+          "Could not find parameters field in CVRFuryParametersStore.",
+          "OK"
+        );
+        return false;
+      }
+
+      var parameterType = cvrParametersStoreType.GetNestedType("Parameter");
+      var valueTypeEnum = cvrParametersStoreType.GetNestedType("ValueType");
+
+      if (parameterType == null || valueTypeEnum == null)
+      {
+        EditorUtility.DisplayDialog(
+          ErrorDialogTitle,
+          "Could not find Parameter type or ValueType enum in CVRFuryParametersStore.",
+          "OK"
+        );
+        return false;
+      }
+
+      if (vrcParameters.parameters != null && vrcParameters.parameters.Length > 0)
+      {
+        var parameterArray = CreateParameterArray(vrcParameters.parameters, parameterType, valueTypeEnum);
+        parametersField.SetValue(cvrParametersStore, parameterArray);
+      }
+      else
+      {
+        var emptyArray = System.Array.CreateInstance(parameterType, 0);
+        parametersField.SetValue(cvrParametersStore, emptyArray);
+      }
+
+      return true;
+    }
+
+    private static System.Array CreateParameterArray(
+      VRCExpressionParameters.Parameter[] vrcParameters,
+      System.Type parameterType,
+      System.Type valueTypeEnum
+    )
+    {
+      var parameterArray = System.Array.CreateInstance(parameterType, vrcParameters.Length);
+
+      for (int i = 0; i < vrcParameters.Length; i++)
+      {
+        var vrcParam = vrcParameters[i];
+        var cvrParam = System.Activator.CreateInstance(parameterType);
+
+        SetParameterFields(vrcParam, cvrParam, parameterType, valueTypeEnum);
+        parameterArray.SetValue(cvrParam, i);
+      }
+
+      return parameterArray;
+    }
+
+    private static void SetParameterFields(
+      VRCExpressionParameters.Parameter vrcParam,
+      object cvrParam,
+      System.Type parameterType,
+      System.Type valueTypeEnum
+    )
+    {
+      var nameField = parameterType.GetField("name");
+      nameField?.SetValue(cvrParam, vrcParam.name);
+
+      var valueTypeField = parameterType.GetField("valueType");
+      if (valueTypeField != null)
+      {
+        var cvrValueType = ConvertValueType(vrcParam.valueType, valueTypeEnum);
+        valueTypeField.SetValue(cvrParam, cvrValueType);
+      }
+
+      var defaultValueField = parameterType.GetField("defaultValue");
+      defaultValueField?.SetValue(cvrParam, vrcParam.defaultValue);
+    }
+
+    private static object ConvertValueType(VRCExpressionParameters.ValueType vrcValueType, System.Type valueTypeEnum)
+    {
+      switch (vrcValueType)
+      {
+        case VRCExpressionParameters.ValueType.Bool:
+          return System.Enum.Parse(valueTypeEnum, "Bool");
+        case VRCExpressionParameters.ValueType.Float:
+          return System.Enum.Parse(valueTypeEnum, "Float");
+        case VRCExpressionParameters.ValueType.Int:
+          return System.Enum.Parse(valueTypeEnum, "Int");
+        default:
+          return System.Enum.Parse(valueTypeEnum, "Float");
+      }
+    }
+
+    private void SaveAssetAndLinkAnimators(ScriptableObject cvrParametersStore, string outputPath)
+    {
+      AssetDatabase.CreateAsset(cvrParametersStore, outputPath);
+      LinkAnimatorsToStore(cvrParametersStore);
+      AssetDatabase.SaveAssets();
+      AssetDatabase.Refresh();
+    }
+
+    private void LinkAnimatorsToStore(ScriptableObject cvrParametersStore)
+    {
+      if (selectedAnimators.Count <= 0)
+      {
+        return;
+      }
+
+      var validAnimators = selectedAnimators.Where(a => a != null).ToList();
+      if (validAnimators.Count <= 0)
+      {
+        return;
+      }
+
+      var cvrParametersStoreType = cvrParametersStore.GetType();
+      var relatedAnimationControllersField = cvrParametersStoreType.GetField("relatedAnimationControllers");
+      if (relatedAnimationControllersField == null)
+      {
+        return;
+      }
+
+      var listType = typeof(List<>).MakeGenericType(typeof(RuntimeAnimatorController));
+      var animatorList = System.Activator.CreateInstance(listType);
+      var addMethod = listType.GetMethod("Add");
+
+      foreach (var animator in validAnimators)
+      {
+        addMethod.Invoke(animatorList, new object[] { animator });
+      }
+
+      relatedAnimationControllersField.SetValue(cvrParametersStore, animatorList);
+    }
+
+    private void ShowSuccessDialog(VRCExpressionParameters vrcParameters, string outputPath)
+    {
+      var paramCount = vrcParameters.parameters?.Length ?? 0;
+      var validAnimatorCount = selectedAnimators.Count(a => a != null);
+      var message = BuildSuccessMessage(paramCount, validAnimatorCount);
+
+      EditorUtility.DisplayDialog("Conversion Complete", $"{message}\n\nOutput file: {outputPath}", "OK");
+
+      var newAsset = AssetDatabase.LoadAssetAtPath(outputPath, typeof(ScriptableObject));
+      if (newAsset != null)
+      {
+        EditorGUIUtility.PingObject(newAsset);
+        Selection.activeObject = newAsset;
+      }
+    }
+
+    private static string BuildSuccessMessage(int paramCount, int validAnimatorCount)
+    {
+      if (paramCount == 0 && validAnimatorCount == 0)
+      {
+        return "Conversion completed successfully!\n\nAn empty CVRFury Parameters Store has been created.";
+      }
+
+      var parts = new List<string>();
+      if (paramCount > 0)
+      {
+        parts.Add($"{paramCount} parameters have been converted");
+      }
+      if (validAnimatorCount > 0)
+      {
+        parts.Add($"{validAnimatorCount} animator controllers have been linked");
+      }
+      return $"Conversion completed successfully!\n\n{string.Join(" and ", parts)} to CVRFury format.";
     }
   }
 }
