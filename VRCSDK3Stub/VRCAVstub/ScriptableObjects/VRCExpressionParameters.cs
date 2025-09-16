@@ -57,6 +57,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
   [CustomEditor(typeof(VRCExpressionParameters))]
   public class VRCExpressionParametersEditorStub : Editor
   {
+    private const string ErrorDialogTitle = "Error";
     private readonly List<RuntimeAnimatorController> selectedAnimators = new List<RuntimeAnimatorController>();
 
     public override VisualElement CreateInspectorGUI()
@@ -84,27 +85,19 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         parametersBox.style.paddingRight = new StyleLength(6);
         parametersBox.style.backgroundColor = new StyleColor(new Color(0.8f, 0.8f, 1f, 0.2f));
 
-        var parametersLabel = new Label("Parameters Preview:");
+        var parametersLabel = new Label("Parameters List:");
         parametersLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
         parametersBox.Add(parametersLabel);
 
         var scrollView = new ScrollView();
         scrollView.style.maxHeight = new StyleLength(200);
 
-        for (int i = 0; i < Mathf.Min(vrcParameters.parameters.Length, 10); i++)
+        for (int i = 0; i < vrcParameters.parameters.Length; i++)
         {
           var param = vrcParameters.parameters[i];
           var paramLabel = new Label($"• {param.name} ({param.valueType}) = {param.defaultValue}");
           paramLabel.style.fontSize = new StyleLength(11);
           scrollView.Add(paramLabel);
-        }
-
-        if (vrcParameters.parameters.Length > 10)
-        {
-          var moreLabel = new Label($"... and {vrcParameters.parameters.Length - 10} more parameters");
-          moreLabel.style.fontSize = new StyleLength(11);
-          // moreLabel.style.fontStyle = FontStyle.Italic; // Commented out for compatibility
-          scrollView.Add(moreLabel);
         }
 
         parametersBox.Add(scrollView);
@@ -239,10 +232,27 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       if (string.IsNullOrEmpty(assetPath))
       {
         EditorUtility.DisplayDialog(
-          "Error",
+          ErrorDialogTitle,
           "Cannot convert unsaved asset. Please save the VRCExpressionParameters asset first.",
           "OK"
         );
+        return;
+      }
+
+      // Check if no animation controllers are selected and confirm with user
+      var validAnimatorsCheck = selectedAnimators.Where(a => a != null).ToList();
+      if (
+        validAnimatorsCheck.Count == 0
+        && !EditorUtility.DisplayDialog(
+          "No Animation Controllers",
+          "No animation controllers have been selected to link with the converted CVRFury Parameters Store.\n\n"
+            + "Animation controllers are typically needed to use the parameters in your avatar's animations.\n\n"
+            + "Are you sure you want to continue without linking any animation controllers?",
+          "Yes, Continue",
+          "Cancel"
+        )
+      )
+      {
         return;
       }
 
@@ -281,7 +291,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         if (cvrParametersStoreType == null)
         {
           EditorUtility.DisplayDialog(
-            "Error",
+            ErrorDialogTitle,
             "CVRFuryParametersStore type not found. Make sure CVRFury is properly installed.",
             "OK"
           );
@@ -295,7 +305,11 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         var parametersField = cvrParametersStoreType.GetField("parameters");
         if (parametersField == null)
         {
-          EditorUtility.DisplayDialog("Error", "Could not find parameters field in CVRFuryParametersStore.", "OK");
+          EditorUtility.DisplayDialog(
+            ErrorDialogTitle,
+            "Could not find parameters field in CVRFuryParametersStore.",
+            "OK"
+          );
           return;
         }
 
@@ -306,7 +320,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         if (parameterType == null || valueTypeEnum == null)
         {
           EditorUtility.DisplayDialog(
-            "Error",
+            ErrorDialogTitle,
             "Could not find Parameter type or ValueType enum in CVRFuryParametersStore.",
             "OK"
           );
