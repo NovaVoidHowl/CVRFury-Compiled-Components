@@ -111,6 +111,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
     private const string CSS_PARAMETER_FOUND = "parameter-found";
     private const string CSS_PARAMETER_MISSING = "parameter-missing";
     private const string CSS_PARAMETER_WARNING = "parameter-warning";
+    private const string STUB_VERSION = "stub-version";
 
     private static void ApplyCVRFuryStyles(VisualElement root)
     {
@@ -310,7 +311,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
 
       var versionLabel = new Label($"Stub Version: {((VRCExpressionsMenu)target).StubVersion}");
-      versionLabel.style.marginBottom = new StyleLength(10);
+      versionLabel.AddToClassList(STUB_VERSION);
       root.Add(versionLabel);
 
       // Show controls count
@@ -383,6 +384,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
       root.Add(infoBox);
       root.Add(convertButton);
+      root.Add(spacer);
 
       // Apply styling after all UI elements are created
       ApplyCVRFuryStyles(root);

@@ -4,7 +4,7 @@ namespace uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common
 {
   public static class StubVersion
   {
-    private static readonly Version _version = new Version(1, 9, 0);
+    private static readonly Version _version = new Version(1, 9, 1);
 
     // For serialization and display
     public static string CurrentVersion => _version.ToString();

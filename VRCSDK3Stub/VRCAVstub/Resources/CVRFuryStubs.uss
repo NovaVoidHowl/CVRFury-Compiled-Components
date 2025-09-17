@@ -239,3 +239,11 @@
     width: 15px;
     height: 15px;
 }
+
+.stub-version {
+    font-size: 9px;
+    position: absolute;
+    color: #AAAAAA;
+    right: 1px;
+    bottom: 1px;
+}

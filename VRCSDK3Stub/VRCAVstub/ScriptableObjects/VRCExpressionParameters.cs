@@ -73,6 +73,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
     private const string CSS_SECTION_HEADER = "section-header";
     private const string CSS_SPACER = "spacer";
     private const string CSS_INFO_BOX = "info-box";
+    private const string STUB_VERSION = "stub-version";
 
     private readonly List<RuntimeAnimatorController> selectedAnimators = new List<RuntimeAnimatorController>();
 
@@ -244,7 +245,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
 
       var versionLabel = new Label($"Stub Version: {((VRCExpressionParameters)target).StubVersion}");
-      versionLabel.style.marginBottom = new StyleLength(10);
+      versionLabel.AddToClassList(STUB_VERSION);
       root.Add(versionLabel);
 
       // Show parameter count
@@ -329,6 +330,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
       root.Add(infoBox);
       root.Add(convertButton);
+      root.Add(spacer);
 
       // Apply styling after all UI elements are created
       ApplyCVRFuryStyles(root);
