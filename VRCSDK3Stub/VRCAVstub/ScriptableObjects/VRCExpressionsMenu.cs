@@ -104,6 +104,13 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
     private const string CSS_EMPTY_SLOT = "empty-slot";
     private const string CSS_SECTION_HEADER = "section-header";
     private const string CSS_SPACER = "spacer";
+    private const string CSS_INFO_BOX = "info-box";
+    private const string CSS_CONTROLS_CONTAINER = "controls-container";
+    private const string CSS_CONTROLS_CONTAINER_INNER = "controls-container-inner";
+    private const string CONTROL_ITEM = "control-item";
+    private const string CSS_PARAMETER_FOUND = "parameter-found";
+    private const string CSS_PARAMETER_MISSING = "parameter-missing";
+    private const string CSS_PARAMETER_WARNING = "parameter-warning";
 
     private static void ApplyCVRFuryStyles(VisualElement root)
     {
@@ -267,6 +274,34 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         container.style.borderTopRightRadius = new StyleLength(12);
       }
 #pragma warning restore S3267
+
+      // Apply parameter status styling as fallback
+      var parameterFoundElements = root.Query<VisualElement>(className: CSS_PARAMETER_FOUND).ToList();
+#pragma warning disable S3267 // Loop should be simplified by calling Select
+      foreach (var element in parameterFoundElements)
+      {
+        element.style.backgroundColor = new StyleColor(new Color(0.0f, 0.588f, 0.0f, 1f)); // #009600 - Brighter green background
+        element.style.color = new StyleColor(Color.white); // White text
+      }
+#pragma warning restore S3267
+
+      var parameterMissingElements = root.Query<VisualElement>(className: CSS_PARAMETER_MISSING).ToList();
+#pragma warning disable S3267 // Loop should be simplified by calling Select
+      foreach (var element in parameterMissingElements)
+      {
+        element.style.backgroundColor = new StyleColor(new Color(0.588f, 0.0f, 0.0f, 1f)); // #960000 - Brighter red background
+        element.style.color = new StyleColor(Color.white); // White text
+      }
+#pragma warning restore S3267
+
+      var parameterWarningElements = root.Query<VisualElement>(className: CSS_PARAMETER_WARNING).ToList();
+#pragma warning disable S3267 // Loop should be simplified by calling Select
+      foreach (var element in parameterWarningElements)
+      {
+        element.style.backgroundColor = new StyleColor(new Color(1.0f, 0.596f, 0.0f, 1f)); // #FF9800 - Orange background
+        element.style.color = new StyleColor(Color.white); // White text
+      }
+#pragma warning restore S3267
     }
 
     public override VisualElement CreateInspectorGUI()
@@ -286,6 +321,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
       // Container for controls display - we'll need to refresh this when parameter stores change
       var controlsDisplayContainer = new VisualElement();
+      controlsDisplayContainer.AddToClassList(CSS_CONTROLS_CONTAINER);
       root.Add(controlsDisplayContainer);
 
       // Parameter stores selection section
@@ -326,20 +362,15 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       spacer.AddToClassList(CSS_SPACER);
       root.Add(spacer);
 
-      var warningBox = new Box();
-      warningBox.style.marginTop = new StyleLength(10);
-      warningBox.style.paddingTop = new StyleLength(6);
-      warningBox.style.paddingBottom = new StyleLength(6);
-      warningBox.style.paddingLeft = new StyleLength(6);
-      warningBox.style.paddingRight = new StyleLength(6);
-      warningBox.style.backgroundColor = new StyleColor(new Color(1f, 0.8f, 0.8f, 0.3f));
+      var infoBox = new Box();
+      infoBox.AddToClassList(CSS_INFO_BOX);
 
-      var warningLabel = new Label(
-        "This VRCExpressionsMenu file can be converted to CVRFury format. "
+      var infoLabel = new Label(
+        "This VRCExpressionsMenu file can be converted to CVRFury format. \n\n"
           + "Select any parameter stores above that should be linked to the converted asset, then click the button below to convert it directly."
       );
-      warningLabel.style.whiteSpace = WhiteSpace.Normal;
-      warningBox.Add(warningLabel);
+      infoLabel.style.whiteSpace = WhiteSpace.Normal;
+      infoBox.Add(infoLabel);
 
       var convertButton = new Button(() =>
       {
@@ -350,7 +381,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       };
       convertButton.AddToClassList(CSS_CVR_FURY_BUTTON);
 
-      root.Add(warningBox);
+      root.Add(infoBox);
       root.Add(convertButton);
 
       // Apply styling after all UI elements are created
@@ -367,15 +398,9 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       if (vrcMenu.controls != null && vrcMenu.controls.Count > 0)
       {
         var controlsBox = new Box();
-        controlsBox.style.marginBottom = new StyleLength(10);
-        controlsBox.style.paddingTop = new StyleLength(6);
-        controlsBox.style.paddingBottom = new StyleLength(6);
-        controlsBox.style.paddingLeft = new StyleLength(6);
-        controlsBox.style.paddingRight = new StyleLength(6);
-        controlsBox.style.backgroundColor = new StyleColor(new Color(0.8f, 0.8f, 1f, 0.2f));
-
+        controlsBox.AddToClassList(CSS_CONTROLS_CONTAINER_INNER);
         var controlsLabel = new Label("Controls List:");
-        controlsLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+        controlsLabel.AddToClassList(CSS_SECTION_HEADER);
         controlsBox.Add(controlsLabel);
 
         var scrollView = new ScrollView();
@@ -395,15 +420,16 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
           var checkMark = hasParameter ? "✓ " : "✗ ";
           var controlLabel = new Label($"{checkMark}{control.name} ({control.type}) - {control.parameter?.name}");
           controlLabel.style.fontSize = new StyleLength(11);
+          controlLabel.AddToClassList(CONTROL_ITEM);
 
-          // Color coding: green for found parameters, red for missing
+          // Apply CSS classes for color theming instead of inline styles
           if (hasParameter)
           {
-            controlLabel.style.color = new StyleColor(new Color(0.0f, 0.7f, 0.0f, 1.0f)); // Dark green
+            controlLabel.AddToClassList(CSS_PARAMETER_FOUND);
           }
           else
           {
-            controlLabel.style.color = new StyleColor(new Color(0.8f, 0.2f, 0.2f, 1.0f)); // Dark red
+            controlLabel.AddToClassList(CSS_PARAMETER_MISSING);
           }
 
           scrollView.Add(controlLabel);
@@ -414,6 +440,10 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
     }
 
+    /// <summary>
+    /// Refreshes the parameter stores list UI with object fields that only accept CVRFuryParametersStore types.
+    /// Includes validation to prevent VRC parameter stores or other incompatible types from being assigned.
+    /// </summary>
     private void RefreshParameterStoresList(VisualElement parameterStoresContainer, System.Action onChanged = null)
     {
       parameterStoresContainer.Clear();
@@ -425,17 +455,30 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         storeRow.style.flexDirection = FlexDirection.Row;
         storeRow.style.marginBottom = new StyleLength(2);
 
-        var objectField = new ObjectField()
-        {
-          objectType = typeof(ScriptableObject),
-          value = selectedParameterStores[index]
-        };
+        // Get the CVRFury parameter store type for object field restriction
+        var cvrParameterStoreType = FindCVRFuryParameterStoreType();
+        var objectFieldType = cvrParameterStoreType ?? typeof(ScriptableObject); // Fallback to ScriptableObject if not found
+
+        var objectField = new ObjectField() { objectType = objectFieldType, value = selectedParameterStores[index] };
         objectField.AddToClassList(CSS_PARAMETER_FIELD);
         objectField.style.flexGrow = 1;
 
         objectField.RegisterValueChangedCallback(evt =>
         {
-          selectedParameterStores[index] = evt.newValue as ScriptableObject;
+          // Additional validation to ensure only CVRFury parameter stores are accepted
+          var newValue = evt.newValue as ScriptableObject;
+          if (newValue != null && cvrParameterStoreType != null && !cvrParameterStoreType.IsInstanceOfType(newValue))
+          {
+            // Reject non-CVRFury parameter store types
+            objectField.SetValueWithoutNotify(selectedParameterStores[index]); // Revert to previous value
+            EditorUtility.DisplayDialog(
+              "Invalid Type",
+              $"Only CVRFuryParametersStore assets are allowed. The selected asset is of type: {newValue.GetType().Name}",
+              "OK"
+            );
+            return;
+          }
+          selectedParameterStores[index] = newValue;
           onChanged?.Invoke(); // Refresh controls display when parameter store changes
         });
 
@@ -603,6 +646,30 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       }
 
       return cvrMenuStoreType;
+    }
+
+    /// <summary>
+    /// Finds the CVRFuryParametersStore type dynamically using reflection.
+    /// This is used to restrict object fields to only accept CVRFury parameter stores.
+    /// </summary>
+    /// <returns>The CVRFuryParametersStore type if found, null otherwise</returns>
+    private static System.Type FindCVRFuryParameterStoreType()
+    {
+      var cvrParameterStoreType = System.AppDomain.CurrentDomain
+        .GetAssemblies()
+        .SelectMany(a => a.GetTypes())
+        .FirstOrDefault(t => t.Name == "CVRFuryParametersStore");
+
+      if (cvrParameterStoreType == null)
+      {
+        EditorUtility.DisplayDialog(
+          "Error",
+          "CVRFuryParametersStore type not found. Make sure CVRFury is properly installed.",
+          "OK"
+        );
+      }
+
+      return cvrParameterStoreType;
     }
 
     private ScriptableObject CreateAndConfigureMenuStore(System.Type cvrMenuStoreType, VRCExpressionsMenu vrcMenu)

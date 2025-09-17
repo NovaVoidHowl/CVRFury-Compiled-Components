@@ -68,9 +68,11 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
     private const string CSS_CVR_FURY_BUTTON = "cvr-fury-button";
     private const string CSS_CVR_FURY_BUTTONS_CONTAINER = "cvr-fury-buttons-container";
     private const string CSS_PARAMETER_FIELD = "parameter-field";
+    private const string PARAMETER_ITEM = "parameter-item";
     private const string CSS_EMPTY_SLOT = "empty-slot";
     private const string CSS_SECTION_HEADER = "section-header";
     private const string CSS_SPACER = "spacer";
+    private const string CSS_INFO_BOX = "info-box";
 
     private readonly List<RuntimeAnimatorController> selectedAnimators = new List<RuntimeAnimatorController>();
 
@@ -268,7 +270,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
         {
           var param = vrcParameters.parameters[i];
           var paramLabel = new Label($"• {param.name} ({param.valueType}) = {param.defaultValue}");
-          paramLabel.AddToClassList("parameter-item");
+          paramLabel.AddToClassList(PARAMETER_ITEM);
           paramLabel.style.fontSize = new StyleLength(11);
           scrollView.Add(paramLabel);
         }
@@ -306,20 +308,15 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       spacer.AddToClassList(CSS_SPACER);
       root.Add(spacer);
 
-      var warningBox = new Box();
-      warningBox.style.marginTop = new StyleLength(10);
-      warningBox.style.paddingTop = new StyleLength(6);
-      warningBox.style.paddingBottom = new StyleLength(6);
-      warningBox.style.paddingLeft = new StyleLength(6);
-      warningBox.style.paddingRight = new StyleLength(6);
-      warningBox.style.backgroundColor = new StyleColor(new Color(1f, 0.8f, 0.8f, 0.3f));
+      var infoBox = new Box();
+      infoBox.AddToClassList(CSS_INFO_BOX);
 
-      var warningLabel = new Label(
-        "This VRCExpressionParameters file can be converted to CVRFury format. "
+      var infoLabel = new Label(
+        "This VRCExpressionParameters file can be converted to CVRFury format. \n\n"
           + "Select any animator controllers above that should be linked to the converted asset, then click the button below to convert it directly."
       );
-      warningLabel.style.whiteSpace = WhiteSpace.Normal;
-      warningBox.Add(warningLabel);
+      infoLabel.style.whiteSpace = WhiteSpace.Normal;
+      infoBox.Add(infoLabel);
 
       var convertButton = new Button(() =>
       {
@@ -330,7 +327,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
       };
       convertButton.AddToClassList(CSS_CVR_FURY_BUTTON);
 
-      root.Add(warningBox);
+      root.Add(infoBox);
       root.Add(convertButton);
 
       // Apply styling after all UI elements are created
