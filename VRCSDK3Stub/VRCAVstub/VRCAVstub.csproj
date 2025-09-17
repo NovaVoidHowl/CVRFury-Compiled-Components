@@ -36,12 +36,6 @@
     <Reference Include="UnityEditor">
       <HintPath>C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Data\Managed\UnityEditor.dll</HintPath>
     </Reference>
-    <Reference Include="UnityEngine.UIElementsModule">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEditor.UIElementsModule">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Data\Managed\UnityEditor.UIElementsModule.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Components\VRCAvatarDescriptor.cs" />
@@ -52,9 +46,6 @@
     <Compile Include="ScriptableObjects\VRCExpressionParameters.cs" />
     <Compile Include="ScriptableObjects\VRCExpressionsMenu.cs" />
     <Compile Include="Common\StubVersion.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\CVRFuryStubs.uss" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
