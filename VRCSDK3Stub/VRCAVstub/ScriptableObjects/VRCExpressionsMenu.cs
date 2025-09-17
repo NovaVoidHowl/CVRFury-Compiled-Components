@@ -68,10 +68,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
     private void OnValidate()
     {
-      if (string.IsNullOrEmpty(_stubVersion))
-      {
-        _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion.CurrentVersion;
-      }
+      _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion.CurrentVersion;
     }
 
     public string StubVersion
