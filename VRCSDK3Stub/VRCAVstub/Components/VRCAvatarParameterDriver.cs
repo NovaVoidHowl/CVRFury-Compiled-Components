@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion;
 
 namespace VRC.SDK3.Avatars.Components
 {
@@ -38,6 +39,22 @@ namespace VRC.SDK3.Avatars.Components
     public List<Parameter> parameters = new List<Parameter>();
     public bool localOnly;
     public string debugString;
+
+    [SerializeField]
+    private string _stubVersion = null;
+
+    private void OnValidate()
+    {
+      if (string.IsNullOrEmpty(_stubVersion))
+      {
+        _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion.CurrentVersion;
+      }
+    }
+
+    public string StubVersion
+    {
+      get { return _stubVersion ?? uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion.CurrentVersion; }
+    }
 
     public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
