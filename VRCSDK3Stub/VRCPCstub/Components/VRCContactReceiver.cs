@@ -6,7 +6,7 @@ using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCPCstub.Common.StubVersion;
 
 namespace VRC.SDK3.Dynamics.Contact.Components
 {
-  public class VRCContactReceiver : VRC.Dynamics.ContactReceiver 
+  public class VRCContactReceiver : VRC.Dynamics.ContactReceiver
   {
     [SerializeField]
     private string _stubVersion = null;

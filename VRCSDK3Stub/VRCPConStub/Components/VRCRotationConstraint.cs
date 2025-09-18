@@ -9,7 +9,7 @@ using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCPConStub.Common.StubVersion;
 
 namespace VRC.SDK3.Dynamics.Constraint.Components
 {
-  public sealed class VRCRotationConstraint : VRCRotationConstraintBase 
+  public sealed class VRCRotationConstraint : VRCRotationConstraintBase
   {
     [SerializeField]
     private string _stubVersion = null;

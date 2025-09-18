@@ -26,6 +26,7 @@ namespace VRC.Dynamics
       OnEnter = 1,
       Proximity = 2
     }
+
     public class IAnimParameterAccess
     {
       bool boolVal { get; set; }
@@ -33,5 +34,4 @@ namespace VRC.Dynamics
       float floatVal { get; set; }
     }
   }
-  
 }
