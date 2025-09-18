@@ -4,10 +4,26 @@ using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 using UnityEngine.Animations;
 using VRC.Dynamics.ManagedTypes;
+using System;
+using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCPConStub.Common.StubVersion;
 
 namespace VRC.SDK3.Dynamics.Constraint.Components
 {
-  public sealed class VRCScaleConstraint : VRCScaleConstraintBase { }
+  public sealed class VRCScaleConstraint : VRCScaleConstraintBase 
+  {
+    [SerializeField]
+    private string _stubVersion = null;
+
+    private void OnValidate()
+    {
+      _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCPConStub.Common.StubVersion.CurrentVersion;
+    }
+
+    public string StubVersion
+    {
+      get { return _stubVersion ?? uk.novavoidhowl.dev.cvrfury.VRCPConStub.Common.StubVersion.CurrentVersion; }
+    }
+  }
 
   [CustomEditor(typeof(VRCScaleConstraint))]
   public class VRCScaleConstraintEditor : Editor

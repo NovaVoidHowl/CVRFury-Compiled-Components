@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
+using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCPMstub.Common.StubVersion;
 
 namespace VRC.Core
 {
@@ -17,17 +18,18 @@ namespace VRC.Core
       world = 1
     }
 
-    public static readonly Version VRCPMstubVersion = new Version(1, 0, 3);
-
     [SerializeField]
-    private string _stubVersion;
+    private string _stubVersion = null;
 
     private void OnValidate()
     {
-      _stubVersion = VRCPMstubVersion.ToString();
+      _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCPMstub.Common.StubVersion.CurrentVersion;
     }
 
-    public string StubVersion => _stubVersion ?? VRCPMstubVersion.ToString();
+    public string StubVersion
+    {
+      get { return _stubVersion ?? uk.novavoidhowl.dev.cvrfury.VRCPMstub.Common.StubVersion.CurrentVersion; }
+    }
   }
 
   [CustomEditor(typeof(PipelineManager))]

@@ -1,10 +1,26 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
+using System;
+using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCPCstub.Common.StubVersion;
 
 namespace VRC.SDK3.Dynamics.Contact.Components
 {
-  public class VRCContactSender : VRC.Dynamics.ContactSender { }
+  public class VRCContactSender : VRC.Dynamics.ContactSender 
+  {
+    [SerializeField]
+    private string _stubVersion = null;
+
+    private void OnValidate()
+    {
+      _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCPCstub.Common.StubVersion.CurrentVersion;
+    }
+
+    public string StubVersion
+    {
+      get { return _stubVersion ?? uk.novavoidhowl.dev.cvrfury.VRCPCstub.Common.StubVersion.CurrentVersion; }
+    }
+  }
 
   [CustomEditor(typeof(VRCContactSender))]
   public class VRCContactSenderEditorStub : Editor

@@ -41,6 +41,7 @@
     <Compile Include="Components\VRCContactReceiver.cs" />
     <Compile Include="Components\VRCContactSender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Common\StubVersion.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\VRCPstub\VRCPstub.csproj">
