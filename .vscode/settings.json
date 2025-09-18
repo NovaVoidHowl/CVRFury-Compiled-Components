@@ -2,6 +2,7 @@
   "cSpell.words": [
     "Behaviour",
     "csharpierrc",
+    "Cstub",
     "cvrfury",
     "Mathf",
     "mdformat",
@@ -9,7 +10,9 @@
     "Scriptable",
     "stylesheet",
     "subparameters",
-    "VRCAV"
+    "VRCAV",
+    "VRCP",
+    "VRCPB"
   ],
   "dotnet.preferCSharpExtension": true,
   "editor.rulers": [
