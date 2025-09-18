@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 using UnityEditor.UIElements;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Avatars.Editors.Common;
+using uk.novavoidhowl.dev.cvrfury.VRCstub.Common; // Shared UI styles
 
 namespace VRC.SDK3.Avatars.Editors
 {
@@ -16,7 +15,7 @@ namespace VRC.SDK3.Avatars.Editors
   /// Custom editor for VRCExpressionsMenu that provides UI and CVRFury conversion functionality.
   /// This editor is separated from the core stub to allow UI changes without recompiling stubs.
   /// </summary>
-    [CustomEditor(typeof(VRCExpressionsMenu))]
+  [CustomEditor(typeof(VRCExpressionsMenu))]
   public class VRCExpressionsMenuEditorStub : Editor
   {
     private readonly List<ScriptableObject> selectedParameterStores = new List<ScriptableObject>();
@@ -46,194 +45,42 @@ namespace VRC.SDK3.Avatars.Editors
 
     private static void ApplyCVRFuryStyles(VisualElement root)
     {
-      try
-      {
-        // First try to load the embedded USS file
-        var styleSheet = LoadEmbeddedStyleSheet();
-        if (styleSheet != null)
-        {
-          root.styleSheets.Add(styleSheet);
-          UnityEngine.Debug.Log("CVRFury embedded stylesheet loaded successfully for VRCExpressionsMenu editor");
-        }
-        else
-        {
-          // Fallback: Apply basic styling directly via code
-          ApplyFallbackStyling(root);
-          UnityEngine.Debug.LogWarning("CVRFury embedded stylesheet not found, using fallback styling");
-        }
+      // Use shared stylesheet and class wiring
+      SharedUIStyles.ApplySharedStyles(root);
 
-        // Apply CSS classes to elements
-        root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
+      // Root container class
+      root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
 
-        var convertButtons = root.Query<Button>().Where(b => b.text.Contains("Convert")).ToList();
-        foreach (var button in convertButtons)
-        {
-          button.AddToClassList(CSS_CVR_FURY_BUTTON);
-        }
-
-        var storesContainers = root.Query<VisualElement>(className: CSS_STORES_CONTAINER).ToList();
-        foreach (var container in storesContainers)
-        {
-          container.AddToClassList(CSS_STORES_CONTAINER);
-        }
-
-        var sectionHeaders = root.Query<Label>(className: CSS_SECTION_HEADER).ToList();
-        foreach (var header in sectionHeaders)
-        {
-          header.AddToClassList(CSS_STORES_HEADER);
-        }
-
-        // Apply parameter field styling
-        var parameterFields = root.Query<ObjectField>().ToList();
-        foreach (var field in parameterFields)
-        {
-          field.AddToClassList(CSS_PARAMETER_FIELD);
-
-          // Check if this parameter field should show a warning (empty or missing reference)
-          if (field.value == null)
-          {
-            field.AddToClassList(CSS_EMPTY_SLOT);
-          }
-        }
-      }
-      catch (System.Exception e)
-      {
-        UnityEngine.Debug.LogError($"Error applying CVRFury styles: {e.Message}");
-        ApplyFallbackStyling(root);
-      }
-    }
-
-    private static StyleSheet LoadEmbeddedStyleSheet()
-    {
-      try
-      {
-        var assembly = Assembly.GetExecutingAssembly();
-        const string resourceName = "VRC.SDK3.Avatars.Editors.Resources.VRCAVUIAndConverter.uss";
-
-        using (var stream = assembly.GetManifestResourceStream(resourceName))
-        {
-          if (stream == null)
-          {
-            UnityEngine.Debug.LogWarning($"Embedded resource '{resourceName}' not found in assembly");
-            return null;
-          }
-
-          using (var reader = new StreamReader(stream))
-          {
-            var cssContent = reader.ReadToEnd();
-#if DEBUG
-            UnityEngine.Debug.Log($"Successfully read embedded CSS content ({cssContent.Length} characters)");
-#endif
-
-            // Create a temporary USS file in the project for Unity to load
-            var assetsPath = "Assets/Temp";
-            var tempUssPath = "Assets/Temp/CVRFuryStubs_Runtime.uss";
-
-            // Ensure directory exists
-            if (!AssetDatabase.IsValidFolder(assetsPath))
-            {
-              AssetDatabase.CreateFolder("Assets", "Temp");
-            }
-
-            // Write USS content to project file
-            File.WriteAllText(tempUssPath, cssContent);
-            AssetDatabase.Refresh();
-
-            // Load the StyleSheet
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(tempUssPath);
-
-            if (styleSheet != null)
-            {
-#if DEBUG
-              UnityEngine.Debug.Log("Successfully loaded CVRFury stylesheet from embedded resource");
-#endif
-            }
-            else
-            {
-              UnityEngine.Debug.LogWarning("Failed to load stylesheet even after creating temp file");
-            }
-
-            return styleSheet;
-          }
-        }
-      }
-      catch (System.Exception e)
-      {
-        UnityEngine.Debug.LogError($"Error loading embedded stylesheet: {e.Message}");
-        return null;
-      }
-    }
-
-    private static void ApplyFallbackStyling(VisualElement root)
-    {
-      // Apply basic styling directly to elements as fallback
+      // Buttons
       var convertButtons = root.Query<Button>().Where(b => b.text.Contains("Convert")).ToList();
-#pragma warning disable S3267 // Loop should be simplified by calling Select
       foreach (var button in convertButtons)
       {
-        button.style.marginTop = new StyleLength(5);
-        button.style.marginBottom = new StyleLength(5);
-        button.style.paddingTop = new StyleLength(8);
-        button.style.paddingBottom = new StyleLength(8);
-        button.style.backgroundColor = new StyleColor(new Color(0.267f, 0.267f, 0.267f, 1f)); // #444444
-        button.style.borderTopWidth = new StyleFloat(1);
-        button.style.borderBottomWidth = new StyleFloat(1);
-        button.style.borderLeftWidth = new StyleFloat(1);
-        button.style.borderRightWidth = new StyleFloat(1);
-        button.style.borderTopColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f)); // #646464
-        button.style.borderBottomColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f));
-        button.style.borderLeftColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f));
-        button.style.borderRightColor = new StyleColor(new Color(0.392f, 0.392f, 0.392f, 1f));
-        button.style.borderTopLeftRadius = new StyleLength(3);
-        button.style.borderTopRightRadius = new StyleLength(3);
-        button.style.borderBottomLeftRadius = new StyleLength(3);
-        button.style.borderBottomRightRadius = new StyleLength(3);
+        button.AddToClassList(CSS_CVR_FURY_BUTTON);
       }
-#pragma warning restore S3267
 
-      // Apply container styling
-      var containers = root.Query<VisualElement>(className: CSS_STORES_CONTAINER).ToList();
-#pragma warning disable S3267 // Loop should be simplified by calling Select
-      foreach (var container in containers)
+      // Stores/sections
+      var storesContainers = root.Query<VisualElement>(className: CSS_STORES_CONTAINER).ToList();
+      foreach (var container in storesContainers)
       {
-        container.style.marginBottom = new StyleLength(10);
-        container.style.paddingTop = new StyleLength(10);
-        container.style.paddingBottom = new StyleLength(10);
-        container.style.paddingLeft = new StyleLength(10);
-        container.style.paddingRight = new StyleLength(10);
-        container.style.backgroundColor = new StyleColor(new Color(0.188f, 0.188f, 0.188f, 1f)); // #303030
-        container.style.borderTopLeftRadius = new StyleLength(12);
-        container.style.borderTopRightRadius = new StyleLength(12);
+        container.AddToClassList(CSS_STORES_CONTAINER);
       }
-#pragma warning restore S3267
 
-      // Apply parameter status styling as fallback
-      var parameterFoundElements = root.Query<VisualElement>(className: CSS_PARAMETER_FOUND).ToList();
-#pragma warning disable S3267 // Loop should be simplified by calling Select
-      foreach (var element in parameterFoundElements)
+      var sectionHeaders = root.Query<Label>(className: CSS_SECTION_HEADER).ToList();
+      foreach (var header in sectionHeaders)
       {
-        element.style.backgroundColor = new StyleColor(new Color(0.0f, 0.588f, 0.0f, 1f)); // #009600 - Brighter green background
-        element.style.color = new StyleColor(Color.white); // White text
+        header.AddToClassList(CSS_STORES_HEADER);
       }
-#pragma warning restore S3267
 
-      var parameterMissingElements = root.Query<VisualElement>(className: CSS_PARAMETER_MISSING).ToList();
-#pragma warning disable S3267 // Loop should be simplified by calling Select
-      foreach (var element in parameterMissingElements)
+      // Parameter fields
+      var parameterFields = root.Query<ObjectField>().ToList();
+      foreach (var field in parameterFields)
       {
-        element.style.backgroundColor = new StyleColor(new Color(0.588f, 0.0f, 0.0f, 1f)); // #960000 - Brighter red background
-        element.style.color = new StyleColor(Color.white); // White text
+        field.AddToClassList(CSS_PARAMETER_FIELD);
+        if (field.value == null)
+        {
+          field.AddToClassList(CSS_EMPTY_SLOT);
+        }
       }
-#pragma warning restore S3267
-
-      var parameterWarningElements = root.Query<VisualElement>(className: CSS_PARAMETER_WARNING).ToList();
-#pragma warning disable S3267 // Loop should be simplified by calling Select
-      foreach (var element in parameterWarningElements)
-      {
-        element.style.backgroundColor = new StyleColor(new Color(1.0f, 0.596f, 0.0f, 1f)); // #FF9800 - Orange background
-        element.style.color = new StyleColor(Color.white); // White text
-      }
-#pragma warning restore S3267
     }
 
     public override VisualElement CreateInspectorGUI()

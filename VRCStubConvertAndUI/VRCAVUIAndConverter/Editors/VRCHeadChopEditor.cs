@@ -1,12 +1,11 @@
 using System;
 using System.Linq;
-using System.IO;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.Editors.Common;
+using uk.novavoidhowl.dev.cvrfury.VRCstub.Common; // Shared UI styles
 
 namespace VRC.SDK3.Avatars.Editors
 {
@@ -27,89 +26,13 @@ namespace VRC.SDK3.Avatars.Editors
 
     private static void ApplyCVRFuryStyles(VisualElement root)
     {
-      try
-      {
-        // First try to load the embedded USS file
-        var styleSheet = LoadEmbeddedStyleSheet();
-        if (styleSheet != null)
-        {
-          root.styleSheets.Add(styleSheet);
-          UnityEngine.Debug.Log("CVRFury embedded stylesheet loaded successfully for VRCHeadChop editor");
-        }
-        else
-        {
-          // Fallback: Apply basic styling directly via code
-          ApplyFallbackStyling(root);
-          UnityEngine.Debug.LogWarning("CVRFury embedded stylesheet not found, using fallback styling");
-        }
-
-        // Apply CSS classes to elements
-        root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
-
-        var convertButtons = root.Query<Button>().Where(b => b.text.Contains("Convert")).ToList();
-        foreach (var button in convertButtons)
-        {
-          button.AddToClassList(CSS_CVR_FURY_BUTTON);
-        }
-      }
-      catch (System.Exception ex)
-      {
-        UnityEngine.Debug.LogError($"Error applying CVRFury styles: {ex.Message}");
-        ApplyFallbackStyling(root);
-      }
+      SharedUIStyles.ApplySharedStyles(root);
+      root.AddToClassList(CSS_CVR_FURY_BUTTONS_CONTAINER);
+      var convertButtons = root.Query<Button>().Where(b => b.text.Contains("Convert")).ToList();
+      foreach (var button in convertButtons)
+        button.AddToClassList(CSS_CVR_FURY_BUTTON);
     }
 
-    private static StyleSheet LoadEmbeddedStyleSheet()
-    {
-      try
-      {
-        var assembly = Assembly.GetExecutingAssembly();
-        const string resourceName = "VRC.SDK3.Avatars.Editors.Resources.VRCAVUIAndConverter.uss";
-
-        using (var stream = assembly.GetManifestResourceStream(resourceName))
-        {
-          if (stream == null)
-          {
-            UnityEngine.Debug.LogWarning($"Embedded resource '{resourceName}' not found in assembly");
-            return null;
-          }
-
-          using (var reader = new StreamReader(stream))
-          {
-            var cssContent = reader.ReadToEnd();
-
-            // Create a temporary USS file in the project for Unity to load
-            var assetsPath = "Assets/Temp";
-            var tempUssPath = "Assets/Temp/CVRFuryStubs_Runtime.uss";
-
-            if (!Directory.Exists(assetsPath))
-            {
-              Directory.CreateDirectory(assetsPath);
-            }
-
-            File.WriteAllText(tempUssPath, cssContent);
-            AssetDatabase.ImportAsset(tempUssPath);
-
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(tempUssPath);
-            return styleSheet;
-          }
-        }
-      }
-      catch (System.Exception ex)
-      {
-        UnityEngine.Debug.LogError($"Error loading embedded stylesheet: {ex.Message}");
-        return null;
-      }
-    }
-
-    private static void ApplyFallbackStyling(VisualElement root)
-    {
-      // Basic fallback styling when USS file is not available
-      root.style.paddingTop = new StyleLength(10);
-      root.style.paddingBottom = new StyleLength(10);
-      root.style.paddingLeft = new StyleLength(10);
-      root.style.paddingRight = new StyleLength(10);
-    }
     public override VisualElement CreateInspectorGUI()
     {
       var root = new VisualElement();
