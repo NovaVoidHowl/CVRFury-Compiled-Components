@@ -61,9 +61,6 @@
     <Compile Include="Editors\VRCPhysBoneColliderEditor.cs" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Shared styles are provided by VRCPUIAndConverter -->
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include="Editors\" />
     <Folder Include="Resources\" />
   </ItemGroup>

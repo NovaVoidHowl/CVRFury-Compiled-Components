@@ -2,10 +2,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("VRCStubUICore")]
-[assembly: AssemblyDescription("Shared UI resources and helpers for CVRFury VRC converters")] 
+[assembly: AssemblyDescription("Shared UI resources and helpers for CVRFury VRC converters")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("VRCStubUICore")] 
+[assembly: AssemblyProduct("VRCStubUICore")]
 [assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

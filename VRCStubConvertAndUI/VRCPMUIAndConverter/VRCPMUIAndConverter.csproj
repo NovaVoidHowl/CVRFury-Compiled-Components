@@ -56,9 +56,6 @@
     <Compile Include="Common\UIVersion.cs" />
     <Compile Include="Editors\PipelineManagerEditor.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <!-- Shared styles are provided by VRCStubUICore -->
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="PostBuildEvent">
     <Exec Command="echo Built VRCPCConverter.dll - VRC Contact Editors" />
