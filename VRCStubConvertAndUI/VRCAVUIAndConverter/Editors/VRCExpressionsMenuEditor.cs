@@ -769,12 +769,17 @@ namespace VRC.SDK3.Avatars.Editors
           }
         }
 
+        // Log how many items were collected before setting the field
+        var countProp = menuItemsListType.GetProperty("Count");
+        int itemCount = countProp != null ? (int)countProp.GetValue(menuItemsList) : -1;
+        UnityEngine.Debug.Log($"[CVRFury Converter] ConvertMenuControls: setting {itemCount} menu item(s) on '{cvrMenuStore.name}'");
+
         // Set the menuItems field
         menuItemsField.SetValue(cvrMenuStore, menuItemsList);
       }
       catch (System.Exception ex)
       {
-        UnityEngine.Debug.LogError($"ConvertMenuControls error: {ex}");
+        UnityEngine.Debug.LogError($"[CVRFury Converter] ConvertMenuControls error on '{cvrMenuStore?.name}': {ex}");
       }
     }
 
@@ -853,6 +858,8 @@ namespace VRC.SDK3.Avatars.Editors
       var subMenuParam = System.Activator.CreateInstance(subMenuParamType);
       SetField(subMenuParam, "name", control.name.Trim());
       SetField(subMenuParam, "subMenuStore", childStore);
+
+      UnityEngine.Debug.Log($"[CVRFury Converter] Created subMenuParameter '{control.name.Trim()}' → '{childStore?.name}'");
 
       return subMenuParam;
     }
