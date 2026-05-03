@@ -178,35 +178,93 @@ namespace VRC.SDK3.Avatars.Editors
     {
       controlsDisplayContainer.Clear();
 
-      // Show controls list if we have controls
-      if (vrcMenu.controls != null && vrcMenu.controls.Count > 0)
+      if (vrcMenu.controls == null || vrcMenu.controls.Count == 0)
+        return;
+
+      var controlsBox = new Box();
+      controlsBox.AddToClassList(CSS_CONTROLS_CONTAINER_INNER);
+      var controlsLabel = new Label("Controls List:");
+      controlsLabel.AddToClassList(CSS_SECTION_HEADER);
+      controlsBox.Add(controlsLabel);
+
+      var scrollView = new ScrollView();
+      scrollView.style.maxHeight = new StyleLength(250);
+
+      // Get parameter info from selected stores to check availability
+      var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
+      var parameterInfo =
+        validParameterStores.Count > 0
+          ? ExtractParameterInfo(validParameterStores)
+          : new Dictionary<string, System.Tuple<System.Type, object>>();
+
+      var visited = new HashSet<VRCExpressionsMenu>();
+      RenderSubMenuControlsSection(scrollView, vrcMenu, parameterInfo, 0, visited);
+
+      controlsBox.Add(scrollView);
+      controlsDisplayContainer.Add(controlsBox);
+    }
+
+    /// <summary>
+    /// Recursively renders controls from a VRCExpressionsMenu into the given container.
+    /// Sub-menu controls are rendered as indented nested sections.
+    /// </summary>
+    private static void RenderSubMenuControlsSection(
+      VisualElement container,
+      VRCExpressionsMenu menu,
+      Dictionary<string, System.Tuple<System.Type, object>> parameterInfo,
+      int depth,
+      HashSet<VRCExpressionsMenu> visited
+    )
+    {
+      if (menu == null || menu.controls == null)
+        return;
+
+      if (visited.Contains(menu))
       {
-        var controlsBox = new Box();
-        controlsBox.AddToClassList(CSS_CONTROLS_CONTAINER_INNER);
-        var controlsLabel = new Label("Controls List:");
-        controlsLabel.AddToClassList(CSS_SECTION_HEADER);
-        controlsBox.Add(controlsLabel);
+        var cycleLabel = new Label($"{new string('─', depth * 2)}  ⚠ Circular sub-menu reference detected — skipping");
+        cycleLabel.style.fontSize = new StyleLength(11);
+        cycleLabel.AddToClassList(CSS_PARAMETER_WARNING);
+        container.Add(cycleLabel);
+        return;
+      }
+      visited.Add(menu);
 
-        var scrollView = new ScrollView();
-        scrollView.style.maxHeight = new StyleLength(150);
+      float indentPx = depth * 12f;
 
-        // Get parameter info from selected stores to check availability
-        var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
-        var parameterInfo =
-          validParameterStores.Count > 0
-            ? ExtractParameterInfo(validParameterStores)
-            : new Dictionary<string, System.Tuple<System.Type, object>>();
+      foreach (var control in menu.controls)
+      {
+        if (control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
+        {
+          // Render sub-menu header
+          var subMenuHeaderLabel = new Label($"▶ {control.name} (SubMenu)");
+          subMenuHeaderLabel.style.fontSize = new StyleLength(11);
+          subMenuHeaderLabel.style.marginLeft = new StyleLength(indentPx);
+          subMenuHeaderLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+          container.Add(subMenuHeaderLabel);
 
-        foreach (var control in vrcMenu.controls)
+          if (control.subMenu != null)
+          {
+            RenderSubMenuControlsSection(container, control.subMenu, parameterInfo, depth + 1, visited);
+          }
+          else
+          {
+            var emptyLabel = new Label($"  (no linked sub-menu asset)");
+            emptyLabel.style.fontSize = new StyleLength(11);
+            emptyLabel.style.marginLeft = new StyleLength(indentPx + 12f);
+            emptyLabel.AddToClassList(CSS_PARAMETER_WARNING);
+            container.Add(emptyLabel);
+          }
+        }
+        else
         {
           var machineName = GetMachineName(control);
           var hasParameter = !string.IsNullOrEmpty(machineName) && parameterInfo.ContainsKey(machineName);
           var checkMark = hasParameter ? "✓ " : "✗ ";
           var controlLabel = new Label($"{checkMark}{control.name} ({control.type}) - {control.parameter?.name}");
           controlLabel.style.fontSize = new StyleLength(11);
+          controlLabel.style.marginLeft = new StyleLength(indentPx);
           controlLabel.AddToClassList(CONTROL_ITEM);
 
-          // Apply CSS classes for color theming instead of inline styles
           if (hasParameter)
           {
             controlLabel.AddToClassList(CSS_PARAMETER_FOUND);
@@ -216,12 +274,11 @@ namespace VRC.SDK3.Avatars.Editors
             controlLabel.AddToClassList(CSS_PARAMETER_MISSING);
           }
 
-          scrollView.Add(controlLabel);
+          container.Add(controlLabel);
         }
-
-        controlsBox.Add(scrollView);
-        controlsDisplayContainer.Add(controlsBox);
       }
+
+      visited.Remove(menu); // allow the same menu to appear on different branches
     }
 
     /// <summary>
@@ -306,7 +363,7 @@ namespace VRC.SDK3.Avatars.Editors
     private bool CheckMissingParametersAndWarn(VRCExpressionsMenu vrcMenu)
     {
       if (vrcMenu.controls == null || vrcMenu.controls.Count == 0)
-        return true; // No controls to check
+        return true;
 
       var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
       var parameterInfo =
@@ -315,15 +372,8 @@ namespace VRC.SDK3.Avatars.Editors
           : new Dictionary<string, System.Tuple<System.Type, object>>();
 
       var missingParameters = new List<string>();
-
-      foreach (var control in vrcMenu.controls)
-      {
-        var machineName = GetMachineName(control);
-        if (!string.IsNullOrEmpty(machineName) && !parameterInfo.ContainsKey(machineName))
-        {
-          missingParameters.Add($"• {control.name} ({control.type}) - Parameter: {control.parameter?.name}");
-        }
-      }
+      var visited = new HashSet<VRCExpressionsMenu>();
+      CollectMissingParametersRecursive(vrcMenu, parameterInfo, missingParameters, visited, "");
 
       if (missingParameters.Count > 0)
       {
@@ -337,7 +387,49 @@ namespace VRC.SDK3.Avatars.Editors
         return EditorUtility.DisplayDialog("Missing Parameters Warning", message, "Continue Anyway", "Cancel");
       }
 
-      return true; // No missing parameters, proceed with conversion
+      return true;
+    }
+
+    /// <summary>
+    /// Recursively collects controls whose parameters are not found in the selected stores.
+    /// </summary>
+    private static void CollectMissingParametersRecursive(
+      VRCExpressionsMenu menu,
+      Dictionary<string, System.Tuple<System.Type, object>> parameterInfo,
+      List<string> missingParameters,
+      HashSet<VRCExpressionsMenu> visited,
+      string pathPrefix
+    )
+    {
+      if (menu == null || menu.controls == null)
+        return;
+
+      if (visited.Contains(menu))
+        return;
+      visited.Add(menu);
+
+      foreach (var control in menu.controls)
+      {
+        var controlPath = string.IsNullOrEmpty(pathPrefix) ? control.name : $"{pathPrefix}/{control.name}";
+
+        if (control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
+        {
+          if (control.subMenu != null)
+            CollectMissingParametersRecursive(control.subMenu, parameterInfo, missingParameters, visited, controlPath);
+        }
+        else
+        {
+          var machineName = GetMachineName(control);
+          if (!string.IsNullOrEmpty(machineName) && !parameterInfo.ContainsKey(machineName))
+          {
+            missingParameters.Add(
+              $"• {controlPath} ({control.type}) - Parameter: {control.parameter?.name}"
+            );
+          }
+        }
+      }
+
+      visited.Remove(menu);
     }
 
     private void ConvertToCVRFury()
@@ -348,7 +440,7 @@ namespace VRC.SDK3.Avatars.Editors
       if (!ValidateAssetPath(assetPath))
         return;
 
-      // Check for missing parameters and warn user
+      // Check for missing parameters and warn user (recursive across all sub-menus)
       if (!CheckMissingParametersAndWarn(vrcMenu))
         return;
 
@@ -362,13 +454,59 @@ namespace VRC.SDK3.Avatars.Editors
         if (cvrMenuStoreType == null)
           return;
 
-        var cvrMenuStore = CreateAndConfigureMenuStore(cvrMenuStoreType, vrcMenu);
-        SaveAssetAndShowResult(cvrMenuStore, outputPath, vrcMenu);
+        var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
+        var visited = new HashSet<VRCExpressionsMenu>();
+        int subMenusConverted = 0;
+
+        var cvrMenuStore = ConvertMenuAsset(
+          vrcMenu,
+          outputPath,
+          validParameterStores,
+          cvrMenuStoreType,
+          visited,
+          ref subMenusConverted
+        );
+
+        SaveAssetAndShowResult(cvrMenuStore, outputPath, vrcMenu, subMenusConverted);
       }
       catch (System.Exception ex)
       {
         HandleConversionError(ex);
       }
+    }
+
+    /// <summary>
+    /// Core recursive conversion method. Creates a CVRFuryMenuStore asset for the given
+    /// VRCExpressionsMenu and saves it to outputPath. Sub-menu controls are converted
+    /// recursively (bottom-up) before the parent is saved.
+    /// </summary>
+    private ScriptableObject ConvertMenuAsset(
+      VRCExpressionsMenu vrcMenu,
+      string outputPath,
+      List<ScriptableObject> parameterStores,
+      System.Type cvrMenuStoreType,
+      HashSet<VRCExpressionsMenu> visited,
+      ref int subMenusConverted
+    )
+    {
+      visited.Add(vrcMenu);
+
+      var cvrMenuStore = ScriptableObject.CreateInstance(cvrMenuStoreType);
+
+      // Link parameter stores
+      LinkParameterStoresToAsset(cvrMenuStoreType, cvrMenuStore, parameterStores);
+
+      // Convert controls
+      if (vrcMenu.controls != null && vrcMenu.controls.Count > 0 && parameterStores.Count > 0)
+      {
+        ConvertMenuControls(vrcMenu, cvrMenuStore, cvrMenuStoreType, parameterStores, visited, ref subMenusConverted);
+      }
+
+      AssetDatabase.CreateAsset(cvrMenuStore, outputPath);
+      AssetDatabase.SaveAssets();
+
+      visited.Remove(vrcMenu);
+      return cvrMenuStore;
     }
 
     private static bool ValidateAssetPath(string assetPath)
@@ -456,19 +594,12 @@ namespace VRC.SDK3.Avatars.Editors
       return cvrParameterStoreType;
     }
 
-    private ScriptableObject CreateAndConfigureMenuStore(System.Type cvrMenuStoreType, VRCExpressionsMenu vrcMenu)
+    private static void LinkParameterStoresToAsset(
+      System.Type cvrMenuStoreType,
+      ScriptableObject cvrMenuStore,
+      List<ScriptableObject> validParameterStores
+    )
     {
-      var cvrMenuStore = ScriptableObject.CreateInstance(cvrMenuStoreType);
-
-      LinkParameterStores(cvrMenuStoreType, cvrMenuStore);
-      ConvertMenuControlsIfNeeded(vrcMenu, cvrMenuStore, cvrMenuStoreType);
-
-      return cvrMenuStore;
-    }
-
-    private void LinkParameterStores(System.Type cvrMenuStoreType, ScriptableObject cvrMenuStore)
-    {
-      var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
       if (validParameterStores.Count == 0)
         return;
 
@@ -488,32 +619,43 @@ namespace VRC.SDK3.Avatars.Editors
       relatedParametersStoresField.SetValue(cvrMenuStore, parameterStoresList);
     }
 
-    private void ConvertMenuControlsIfNeeded(
-      VRCExpressionsMenu vrcMenu,
-      ScriptableObject cvrMenuStore,
-      System.Type cvrMenuStoreType
-    )
+    // Legacy overload kept for backward compatibility — not used by recursive path
+    private ScriptableObject CreateAndConfigureMenuStore(System.Type cvrMenuStoreType, VRCExpressionsMenu vrcMenu)
     {
+      var cvrMenuStore = ScriptableObject.CreateInstance(cvrMenuStoreType);
+      LinkParameterStores(cvrMenuStoreType, cvrMenuStore);
       var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
       if (vrcMenu.controls != null && vrcMenu.controls.Count > 0 && validParameterStores.Count > 0)
       {
-        ConvertMenuControls(vrcMenu, cvrMenuStore, cvrMenuStoreType, validParameterStores);
+        var visited = new HashSet<VRCExpressionsMenu>();
+        int ignored = 0;
+        ConvertMenuControls(vrcMenu, cvrMenuStore, cvrMenuStoreType, validParameterStores, visited, ref ignored);
       }
+      return cvrMenuStore;
     }
 
-    private void SaveAssetAndShowResult(ScriptableObject cvrMenuStore, string outputPath, VRCExpressionsMenu vrcMenu)
+    private void LinkParameterStores(System.Type cvrMenuStoreType, ScriptableObject cvrMenuStore)
     {
-      AssetDatabase.CreateAsset(cvrMenuStore, outputPath);
-      AssetDatabase.SaveAssets();
+      var validParameterStores = selectedParameterStores.Where(s => s != null).ToList();
+      LinkParameterStoresToAsset(cvrMenuStoreType, cvrMenuStore, validParameterStores);
+    }
+
+    private void SaveAssetAndShowResult(
+      ScriptableObject cvrMenuStore,
+      string outputPath,
+      VRCExpressionsMenu vrcMenu,
+      int subMenusConverted = 0
+    )
+    {
       AssetDatabase.Refresh();
 
-      var message = BuildSuccessMessage(vrcMenu);
+      var message = BuildSuccessMessage(vrcMenu, subMenusConverted);
       EditorUtility.DisplayDialog("Conversion Complete", $"{message}\n\nOutput file: {outputPath}", "OK");
 
       SelectNewAsset(outputPath);
     }
 
-    private string BuildSuccessMessage(VRCExpressionsMenu vrcMenu)
+    private string BuildSuccessMessage(VRCExpressionsMenu vrcMenu, int subMenusConverted = 0)
     {
       var controlCount = vrcMenu.controls?.Count ?? 0;
       var validStoresCount = selectedParameterStores.Count(s => s != null);
@@ -532,8 +674,12 @@ namespace VRC.SDK3.Avatars.Editors
       {
         parts.Add($"{validStoresCount} parameter stores have been linked");
       }
+      if (subMenusConverted > 0)
+      {
+        parts.Add($"{subMenusConverted} sub-menu(s) were also recursively converted and linked");
+      }
 
-      return $"Conversion completed successfully!\n\n{string.Join(" and ", parts)}.";
+      return $"Conversion completed successfully!\n\n{string.Join(", and ", parts)}.";
     }
 
     private static void SelectNewAsset(string outputPath)
@@ -569,7 +715,9 @@ namespace VRC.SDK3.Avatars.Editors
       VRCExpressionsMenu vrcMenu,
       ScriptableObject cvrMenuStore,
       System.Type cvrMenuStoreType,
-      List<ScriptableObject> parameterStores
+      List<ScriptableObject> parameterStores,
+      HashSet<VRCExpressionsMenu> visited,
+      ref int subMenusConverted
     )
     {
       try
@@ -593,7 +741,18 @@ namespace VRC.SDK3.Avatars.Editors
         // Process each control
         foreach (var control in vrcMenu.controls)
         {
-          var menuItem = ConvertControl(control, parameterInfo, dropdownCollectors);
+          object menuItem;
+          if (control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
+          {
+            menuItem = ConvertSubMenuControl(
+              control, parameterStores, cvrMenuStoreType, visited, ref subMenusConverted
+            );
+          }
+          else
+          {
+            menuItem = ConvertControl(control, parameterInfo, dropdownCollectors);
+          }
+
           if (menuItem != null)
           {
             addMethod.Invoke(menuItemsList, new object[] { menuItem });
@@ -617,6 +776,85 @@ namespace VRC.SDK3.Avatars.Editors
       {
         UnityEngine.Debug.LogError($"ConvertMenuControls error: {ex}");
       }
+    }
+
+    /// <summary>
+    /// Converts a SubMenu control by recursively converting its linked VRCExpressionsMenu,
+    /// saving it as its own .CVRFury.asset, then creating a subMenuParameter that references it.
+    /// </summary>
+    private object ConvertSubMenuControl(
+      VRCExpressionsMenu.Control control,
+      List<ScriptableObject> parameterStores,
+      System.Type cvrMenuStoreType,
+      HashSet<VRCExpressionsMenu> visited,
+      ref int subMenusConverted
+    )
+    {
+      if (control.subMenu == null)
+      {
+        UnityEngine.Debug.LogWarning(
+          $"SubMenu control '{control.name}' has no linked sub-menu asset — skipping"
+        );
+        return null;
+      }
+
+      if (visited.Contains(control.subMenu))
+      {
+        UnityEngine.Debug.LogWarning(
+          $"Circular sub-menu reference detected for '{control.name}' — skipping to prevent infinite loop"
+        );
+        return null;
+      }
+
+      var subAssetPath = AssetDatabase.GetAssetPath(control.subMenu);
+      if (string.IsNullOrEmpty(subAssetPath))
+      {
+        UnityEngine.Debug.LogWarning(
+          $"Sub-menu asset for '{control.name}' is not saved to disk — skipping"
+        );
+        return null;
+      }
+
+      var subOutputPath = GenerateOutputPath(subAssetPath);
+
+      // Handle existing file for sub-menu (auto-overwrite during recursive conversion)
+      if (System.IO.File.Exists(subOutputPath))
+      {
+        AssetDatabase.DeleteAsset(subOutputPath);
+        AssetDatabase.Refresh();
+      }
+
+      // Recursively convert the sub-menu asset
+      var childStore = ConvertMenuAsset(
+        control.subMenu,
+        subOutputPath,
+        parameterStores,
+        cvrMenuStoreType,
+        visited,
+        ref subMenusConverted
+      );
+
+      subMenusConverted++;
+
+      // Find the subMenuParameter type via reflection
+      var subMenuParamType = System.AppDomain.CurrentDomain
+        .GetAssemblies()
+        .SelectMany(a => a.GetTypes())
+        .FirstOrDefault(t => t.Name == "subMenuParameter");
+
+      if (subMenuParamType == null)
+      {
+        UnityEngine.Debug.LogError(
+          "subMenuParameter type not found — make sure CVRFury runtime is up to date"
+        );
+        return null;
+      }
+
+      var subMenuParam = System.Activator.CreateInstance(subMenuParamType);
+      SetField(subMenuParam, "name", control.name.Trim());
+      SetField(subMenuParam, "subMenuStore", childStore);
+
+      return subMenuParam;
     }
 
     private static Dictionary<string, System.Tuple<System.Type, object>> ExtractParameterInfo(
@@ -727,8 +965,13 @@ namespace VRC.SDK3.Avatars.Editors
           return ConvertRadialPuppet(control, machineName);
 
         case VRCExpressionsMenu.Control.ControlType.SubMenu:
+          // SubMenu controls are handled before ConvertControl is called (in ConvertMenuControls).
+          // If we somehow reach here, log and skip.
+          UnityEngine.Debug.LogWarning($"SubMenu control '{control.name}' reached ConvertControl unexpectedly — skipping");
+          return null;
+
         case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
-          // Not supported yet
+          // Not supported
           UnityEngine.Debug.LogWarning($"Control type {control.type} is not supported for conversion");
           return null;
 
