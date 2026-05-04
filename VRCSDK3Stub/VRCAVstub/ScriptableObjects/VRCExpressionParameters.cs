@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
+using UnityEditor.UIElements;
 using StubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion;
 
 namespace VRC.SDK3.Avatars.ScriptableObjects
@@ -33,10 +39,7 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
 
     private void OnValidate()
     {
-      if (string.IsNullOrEmpty(_stubVersion))
-      {
-        _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion.CurrentVersion;
-      }
+      _stubVersion = uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion.CurrentVersion;
     }
 
     public string StubVersion
@@ -48,47 +51,6 @@ namespace VRC.SDK3.Avatars.ScriptableObjects
     public static Version GetStubVersion()
     {
       return uk.novavoidhowl.dev.cvrfury.VRCAVstub.Common.StubVersion.AsVersion;
-    }
-  }
-
-  [CustomEditor(typeof(VRCExpressionParameters))]
-  public class VRCExpressionParametersEditorStub : Editor
-  {
-    public override VisualElement CreateInspectorGUI()
-    {
-      var root = new VisualElement();
-
-      var versionLabel = new Label($"Stub Version: {((VRCExpressionParameters)target).StubVersion}");
-      versionLabel.style.marginBottom = new StyleLength(10);
-      root.Add(versionLabel);
-
-      var warningBox = new Box();
-      warningBox.style.marginTop = new StyleLength(10);
-      warningBox.style.paddingTop = new StyleLength(6);
-      warningBox.style.paddingBottom = new StyleLength(6);
-      warningBox.style.paddingLeft = new StyleLength(6);
-      warningBox.style.paddingRight = new StyleLength(6);
-      warningBox.style.backgroundColor = new StyleColor(new Color(1f, 0.8f, 0.8f, 0.3f));
-
-      var warningLabel = new Label(
-        "This file needs to be converted for data import to CVRFury, please click the below button to open the converter"
-      );
-      warningLabel.style.whiteSpace = WhiteSpace.Normal;
-      warningBox.Add(warningLabel);
-
-      var convertButton = new Button(() =>
-      {
-        EditorApplication.ExecuteMenuItem("NVH/CVRFury/Conversion Tools/Convert VRCExpressionParameters");
-      })
-      {
-        text = "Open VRCExpressionParameters Converter"
-      };
-      convertButton.style.marginTop = new StyleLength(10);
-
-      root.Add(warningBox);
-      root.Add(convertButton);
-
-      return root;
     }
   }
 }

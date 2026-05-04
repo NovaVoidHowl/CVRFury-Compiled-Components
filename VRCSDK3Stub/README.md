@@ -4,13 +4,35 @@ A very lightweight DLL set specifically configured for CVRFury to support extrac
 for the Avatar conversion Feature
 
 ## Warnings
-
-- These DLLs depend on having a fully functional copy of CVRFury and the Chillout VR CCK installed in the project
 - VRC SDK must not be installed in the project
 
 ## Supported classes
 
+### Avatar Components (VRCAVstub)
 - VRCAvatarDescriptor
+- VRCSpatialAudioSource
+- VRCHeadChop
+- VRCAvatarParameterDriver
+
+### Avatar ScriptableObjects (VRCAVstub)
 - VRCExpressionParameters
 - VRCExpressionsMenu
-- PipelineManagerEditor
+
+### PhysBones Components (VRCPBstub)
+- VRCPhysBone
+- VRCPhysBoneCollider
+
+### Contact Components (VRCPCstub)
+- VRCContactReceiver
+- VRCContactSender
+
+### Constraint Components (VRCPConStub)
+- VRCAimConstraint
+- VRCLookAtConstraint
+- VRCParentConstraint
+- VRCPositionConstraint
+- VRCRotationConstraint
+- VRCScaleConstraint
+
+### Pipeline Management (VRCPMstub)
+- PipelineManager
