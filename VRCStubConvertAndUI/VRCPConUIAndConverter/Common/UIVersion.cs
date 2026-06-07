@@ -4,7 +4,7 @@ namespace VRC.SDK3.Dynamics.Constraint.Editors.Common
 {
   public static class UIVersion
   {
-    private static readonly Version _version = new Version(2, 0, 0);
+    private static readonly Version _version = new Version(2, 1, 0);
 
     // For serialization and display
     public static string CurrentVersion => _version.ToString();

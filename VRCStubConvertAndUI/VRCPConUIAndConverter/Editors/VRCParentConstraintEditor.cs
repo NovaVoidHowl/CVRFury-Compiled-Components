@@ -6,6 +6,7 @@ using UnityEngine.Animations;
 using VRC.Dynamics.ManagedTypes;
 using VRC.SDK3.Dynamics.Constraint.Components;
 using VRC.SDK3.Dynamics.Constraint.Editors.Common;
+using uk.novavoidhowl.dev.cvrfury.compiled.vrcconstraints;
 using uk.novavoidhowl.dev.cvrfury.VRCstub.Common; // Shared UI styles
 using System;
 
@@ -68,7 +69,7 @@ namespace VRC.SDK3.Dynamics.Constraint.Editors
       stubVersionLabel.style.fontSize = new StyleLength(10);
       stubVersionLabel.style.color = new StyleColor(Color.gray);
 
-      var uiVersionLabel = new Label($"UI: {UIVersion.CurrentVersion}");
+      var uiVersionLabel = new Label($"UI: {UIVersion.CurrentVersion} | API: {VRCConstraintConversionActions.ApiVersion}");
       uiVersionLabel.AddToClassList(UI_VERSION);
       uiVersionLabel.style.fontSize = new StyleLength(10);
       uiVersionLabel.style.color = new StyleColor(Color.gray);
@@ -85,62 +86,8 @@ namespace VRC.SDK3.Dynamics.Constraint.Editors
 
     private void ConvertToUnityConstraint()
     {
-      VRCParentConstraint vrcConstraint = (VRCParentConstraint)target;
-      GameObject gameObject = vrcConstraint.gameObject;
-
-      // Add Unity ParentConstraint component
-      ParentConstraint unityConstraint = Undo.AddComponent<ParentConstraint>(gameObject);
-
-      // Transfer basic properties
-      unityConstraint.weight = vrcConstraint.GlobalWeight;
-      unityConstraint.constraintActive = vrcConstraint.IsActive;
-
-      // Set translation offset
-      unityConstraint.translationAtRest = vrcConstraint.PositionAtRest;
-
-      // Set rotation offset
-      unityConstraint.rotationAtRest = vrcConstraint.RotationAtRest;
-
-      // Add sources
-      for (int i = 0; i < vrcConstraint.Sources.Count; i++)
-      {
-        var vrcSource = vrcConstraint.Sources[i];
-        if (vrcSource.SourceTransform != null)
-        {
-          ConstraintSource unitySource = new ConstraintSource
-          {
-            sourceTransform = vrcSource.SourceTransform,
-            weight = vrcSource.Weight
-          };
-          int sourceIndex = unityConstraint.AddSource(unitySource);
-
-          // Set position and rotation offsets for this source
-          unityConstraint.SetTranslationOffset(sourceIndex, vrcSource.ParentPositionOffset);
-          unityConstraint.SetRotationOffset(sourceIndex, vrcSource.ParentRotationOffset);
-        }
-      }
-
-      // Set axes
-      unityConstraint.translationAxis = 0;
-      if (vrcConstraint.AffectsPositionX)
-        unityConstraint.translationAxis |= Axis.X;
-      if (vrcConstraint.AffectsPositionY)
-        unityConstraint.translationAxis |= Axis.Y;
-      if (vrcConstraint.AffectsPositionZ)
-        unityConstraint.translationAxis |= Axis.Z;
-
-      unityConstraint.rotationAxis = 0;
-      if (vrcConstraint.AffectsRotationX)
-        unityConstraint.rotationAxis |= Axis.X;
-      if (vrcConstraint.AffectsRotationY)
-        unityConstraint.rotationAxis |= Axis.Y;
-      if (vrcConstraint.AffectsRotationZ)
-        unityConstraint.rotationAxis |= Axis.Z;
-
-      // Remove VRC component after conversion
-      Undo.DestroyObjectImmediate(vrcConstraint);
-
-      EditorUtility.DisplayDialog("Conversion Complete", "Successfully converted to Unity ParentConstraint", "OK");
+      var result = VRCConstraintConversionActions.Convert((Component)target, VRCConstraintConversionOptions.ForInspector());
+      VRCConstraintConversionEditorDialog.Show(result);
     }
   }
 }
