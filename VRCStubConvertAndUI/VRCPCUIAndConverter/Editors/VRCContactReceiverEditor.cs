@@ -53,9 +53,13 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
         return;
       }
 
+      // Determine the parent transform for converted trigger
+      // If rootTransform is set, use that; otherwise use the receiver's transform
+      var parentTransform = vrcReceiver.rootTransform != null ? vrcReceiver.rootTransform : receiverGameObject.transform;
+
       // Create a new child GameObject for the trigger
       var triggerGameObject = new GameObject($"CVR_Trigger_From_{receiverGameObject.name}");
-      triggerGameObject.transform.SetParent(receiverGameObject.transform, false);
+      triggerGameObject.transform.SetParent(parentTransform, false);
 
       // Add appropriate collider based on shape type
       AddColliderBasedOnShape(vrcReceiver, triggerGameObject);
@@ -74,6 +78,10 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
       // Mark objects as dirty for saving
       EditorUtility.SetDirty(triggerGameObject);
       EditorUtility.SetDirty(receiverGameObject);
+      if (vrcReceiver.rootTransform != null)
+      {
+        EditorUtility.SetDirty(vrcReceiver.rootTransform.gameObject);
+      }
 
       // Remove the original VRC component
       DestroyImmediate(vrcReceiver);
@@ -341,7 +349,8 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
       EditorUtility.DisplayDialog(
         "Contact Receiver Conversion Complete",
         "The VRC Contact Receiver has been successfully converted to a CVR Advanced Avatar Settings Trigger. "
-          + "The original component has been removed and a new child GameObject with the CVR trigger has been created.",
+          + "The original component has been removed and a new child GameObject with the CVR trigger has been created. "
+          + "The trigger is placed under the rootTransform if set, otherwise under the original component's GameObject.",
         "OK"
       );
     }

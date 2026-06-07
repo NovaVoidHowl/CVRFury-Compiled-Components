@@ -52,12 +52,16 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
         return;
       }
 
+      // Determine the parent transform for converted pointers
+      // If rootTransform is set, use that; otherwise use the sender's transform
+      var parentTransform = vrcSender.rootTransform != null ? vrcSender.rootTransform : senderGameObject.transform;
+
       // Create a child GameObject for each collision tag
       for (int i = 0; i < vrcSender.collisionTags.Count; i++)
       {
         var collisionTag = vrcSender.collisionTags[i];
         var pointerGameObject = new GameObject($"CVR_Pointer{i + 1}_From_{senderGameObject.name}");
-        pointerGameObject.transform.SetParent(senderGameObject.transform, false);
+        pointerGameObject.transform.SetParent(parentTransform, false);
 
         // Add appropriate collider based on shape type
         AddColliderBasedOnShape(vrcSender, pointerGameObject);
@@ -71,6 +75,10 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
 
       // Mark objects as dirty for saving
       EditorUtility.SetDirty(senderGameObject);
+      if (vrcSender.rootTransform != null)
+      {
+        EditorUtility.SetDirty(vrcSender.rootTransform.gameObject);
+      }
 
       // Remove the original VRC component
       DestroyImmediate(vrcSender);
@@ -145,7 +153,8 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
         "Contact Sender Conversion Complete",
         "The VRC Contact Sender has been successfully converted to CVR Pointer(s). "
           + "The original component has been removed and new child GameObject(s) with CVR pointers have been created "
-          + "(one for each collision tag).",
+          + "(one for each collision tag). "
+          + "The pointers are placed under the rootTransform if set, otherwise under the original component's GameObject.",
         "OK"
       );
     }
