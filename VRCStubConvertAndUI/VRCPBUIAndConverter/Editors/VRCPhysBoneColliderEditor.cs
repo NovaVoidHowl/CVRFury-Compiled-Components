@@ -151,6 +151,23 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
     }
 
     // -------------------------------------------------------------------------
+    // Returns true if at least one converted-collider GO owned by src already
+    // exists under effectiveRoot, used to set the initial Convert button label.
+    // -------------------------------------------------------------------------
+
+    private static bool HasAnyExistingConversions(
+      Transform effectiveRoot, VRCPhysBoneCollider src,
+      Type dbType, Type[] mc1Types, Type[] mc2Types)
+    {
+      if (dbType != null && FindExistingConvertedGO(effectiveRoot, src, dbType) != null) return true;
+      foreach (var t in mc1Types)
+        if (t != null && FindExistingConvertedGO(effectiveRoot, src, t) != null) return true;
+      foreach (var t in mc2Types)
+        if (t != null && FindExistingConvertedGO(effectiveRoot, src, t) != null) return true;
+      return false;
+    }
+
+    // -------------------------------------------------------------------------
     // Existing-conversions UI section
     // Clears then repopulates a persistent container with clickable navigation
     // buttons for each already-converted collider found under effectiveRoot.
@@ -370,7 +387,12 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       root.Add(mc2Toggle);
 
       // -- Convert button --
-      var convertButton = new Button { text = "Convert" };
+      // Label is "Re-Convert" if any conversions already exist for this source collider.
+      bool hasExistingConversions = HasAnyExistingConversions(
+        effectiveRoot, src, dbType,
+        new[] { mc1SphereType, mc1CapsuleType, mc1PlaneType },
+        new[] { mc2SphereType, mc2CapsuleType, mc2PlaneType });
+      var convertButton = new Button { text = hasExistingConversions ? "Re-Convert" : "Convert" };
       convertButton.AddToClassList(CSS_CVR_FURY_BUTTON);
       convertButton.style.marginTop = new StyleLength(6);
 
@@ -471,6 +493,9 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           new[] { capturedMc1SphereType, capturedMc1CapsuleType, capturedMc1PlaneType },
           new[] { capturedMc2SphereType, capturedMc2CapsuleType, capturedMc2PlaneType }
         );
+
+        // Update button label now that at least one conversion exists
+        convertButton.text = "Re-Convert";
       };
 
       root.Add(convertButton);
