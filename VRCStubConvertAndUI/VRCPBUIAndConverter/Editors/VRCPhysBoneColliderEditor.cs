@@ -41,7 +41,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
       {
         var t = asm.GetType(fullTypeName);
-        if (t != null) return t;
+        if (t != null)
+          return t;
       }
       return null;
     }
@@ -56,9 +57,11 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       float ax = Mathf.Abs(fwd.x);
       float ay = Mathf.Abs(fwd.y);
       float az = Mathf.Abs(fwd.z);
-      if (ax >= ay && ax >= az) return 0; // X
-      if (ay >= ax && ay >= az) return 1; // Y
-      return 2;                           // Z
+      if (ax >= ay && ax >= az)
+        return 0; // X
+      if (ay >= ax && ay >= az)
+        return 1; // Y
+      return 2; // Z
     }
 
     // -------------------------------------------------------------------------
@@ -71,10 +74,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       var type = obj.GetType();
       while (type != null)
       {
-        var prop = type.GetProperty(
-          name,
-          BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly
-        );
+        var prop = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         if (prop != null && prop.CanWrite)
         {
           prop.SetValue(obj, value);
@@ -90,10 +90,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       var type = obj.GetType();
       while (type != null)
       {
-        var field = type.GetField(
-          name,
-          BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly
-        );
+        var field = type.GetField(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         if (field != null)
         {
           field.SetValue(obj, value);
@@ -109,7 +106,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       while (type != null)
       {
         var nested = type.GetNestedType(nestedName, BindingFlags.Public);
-        if (nested != null) return nested;
+        if (nested != null)
+          return nested;
         type = type.BaseType;
       }
       return null;
@@ -128,7 +126,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       go.transform.SetParent(parent, false);
       go.transform.localPosition = Vector3.zero;
       go.transform.localRotation = Quaternion.identity;
-      go.transform.localScale    = Vector3.one;
+      go.transform.localScale = Vector3.one;
       return go;
     }
 
@@ -138,8 +136,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
     // Used by the conversion methods to update in place instead of duplicating.
     // -------------------------------------------------------------------------
 
-    private static GameObject FindExistingConvertedGO(
-      Transform effectiveRoot, VRCPhysBoneCollider src, Type targetType)
+    private static GameObject FindExistingConvertedGO(Transform effectiveRoot, VRCPhysBoneCollider src, Type targetType)
     {
       foreach (Component c in effectiveRoot.GetComponentsInChildren(targetType, true))
       {
@@ -156,14 +153,21 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
     // -------------------------------------------------------------------------
 
     private static bool HasAnyExistingConversions(
-      Transform effectiveRoot, VRCPhysBoneCollider src,
-      Type dbType, Type[] mc1Types, Type[] mc2Types)
+      Transform effectiveRoot,
+      VRCPhysBoneCollider src,
+      Type dbType,
+      Type[] mc1Types,
+      Type[] mc2Types
+    )
     {
-      if (dbType != null && FindExistingConvertedGO(effectiveRoot, src, dbType) != null) return true;
+      if (dbType != null && FindExistingConvertedGO(effectiveRoot, src, dbType) != null)
+        return true;
       foreach (var t in mc1Types)
-        if (t != null && FindExistingConvertedGO(effectiveRoot, src, t) != null) return true;
+        if (t != null && FindExistingConvertedGO(effectiveRoot, src, t) != null)
+          return true;
       foreach (var t in mc2Types)
-        if (t != null && FindExistingConvertedGO(effectiveRoot, src, t) != null) return true;
+        if (t != null && FindExistingConvertedGO(effectiveRoot, src, t) != null)
+          return true;
       return false;
     }
 
@@ -181,7 +185,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       Transform effectiveRoot,
       Type dbType,
       Type[] mc1Types,
-      Type[] mc2Types)
+      Type[] mc2Types
+    )
     {
       container.Clear();
 
@@ -199,7 +204,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       // MagicaCloth 1 — only include GOs whose marker references this src collider
       foreach (var t in mc1Types)
       {
-        if (t == null) continue;
+        if (t == null)
+          continue;
         foreach (Component c in effectiveRoot.GetComponentsInChildren(t, true))
         {
           var marker = c.GetComponent<CVRFuryConvertedColliderMarker>();
@@ -211,7 +217,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       // MagicaCloth 2 — only include GOs whose marker references this src collider
       foreach (var t in mc2Types)
       {
-        if (t == null) continue;
+        if (t == null)
+          continue;
         foreach (Component c in effectiveRoot.GetComponentsInChildren(t, true))
         {
           var marker = c.GetComponent<CVRFuryConvertedColliderMarker>();
@@ -221,7 +228,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       }
 
       // Leave container empty (invisible) when nothing found
-      if (found.Count == 0) return;
+      if (found.Count == 0)
+        return;
 
       var box = new Box();
       box.AddToClassList(CSS_INFO_BOX);
@@ -257,17 +265,17 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       // Detect physics packages at Inspector-open time via runtime type lookup.
       // No #if guards — this file is a precompiled DLL and project defines are
       // not available at its build time.
-      Type dbType         = FindType("DynamicBoneCollider");
-      Type mc1SphereType  = FindType("MagicaCloth.MagicaSphereCollider");
+      Type dbType = FindType("DynamicBoneCollider");
+      Type mc1SphereType = FindType("MagicaCloth.MagicaSphereCollider");
       Type mc1CapsuleType = FindType("MagicaCloth.MagicaCapsuleCollider");
-      Type mc1PlaneType   = FindType("MagicaCloth.MagicaPlaneCollider");
-      Type mc2SphereType  = FindType("MagicaCloth2.MagicaSphereCollider");
+      Type mc1PlaneType = FindType("MagicaCloth.MagicaPlaneCollider");
+      Type mc2SphereType = FindType("MagicaCloth2.MagicaSphereCollider");
       Type mc2CapsuleType = FindType("MagicaCloth2.MagicaCapsuleCollider");
-      Type mc2PlaneType   = FindType("MagicaCloth2.MagicaPlaneCollider");
+      Type mc2PlaneType = FindType("MagicaCloth2.MagicaPlaneCollider");
 
       bool mc1Available = mc1SphereType != null && mc1CapsuleType != null && mc1PlaneType != null;
       bool mc2Available = mc2SphereType != null && mc2CapsuleType != null && mc2PlaneType != null;
-      bool isPlane      = src.shapeType == VRCPhysBoneColliderBase.ShapeType.Plane;
+      bool isPlane = src.shapeType == VRCPhysBoneColliderBase.ShapeType.Plane;
 
       // The effective root is where new collider GameObjects will be parented.
       // VRC resolves the collider's world origin from rootTransform when set,
@@ -312,9 +320,10 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       infoBox.Add(shapeLabel);
 
       // Root transform info — always shown so the user knows where converted GOs land
-      string rootDesc = src.rootTransform != null
-        ? $"Root transform: {src.rootTransform.name} \u2014 converted colliders will be created as children of this transform."
-        : "No rootTransform set \u2014 converted colliders will be created as children of this GameObject.";
+      string rootDesc =
+        src.rootTransform != null
+          ? $"Root transform: {src.rootTransform.name} \u2014 converted colliders will be created as children of this transform."
+          : "No rootTransform set \u2014 converted colliders will be created as children of this GameObject.";
       var rootInfoLabel = new Label(rootDesc);
       rootInfoLabel.style.whiteSpace = WhiteSpace.Normal;
       infoBox.Add(rootInfoLabel);
@@ -361,9 +370,10 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       if (!dbCanConvert)
       {
         dbToggle.SetEnabled(false);
-        dbToggle.tooltip = dbType == null
-          ? "DynamicBone package not detected. Run NVH \u2192 CVRFury \u2192 Integrations \u2192 Check Dynamic Bone Support first."
-          : "DynamicBone does not support Plane colliders.";
+        dbToggle.tooltip =
+          dbType == null
+            ? "DynamicBone package not detected. Run NVH \u2192 CVRFury \u2192 Integrations \u2192 Check Dynamic Bone Support first."
+            : "DynamicBone does not support Plane colliders.";
       }
       root.Add(dbToggle);
 
@@ -389,9 +399,12 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       // -- Convert button --
       // Label is "Re-Convert" if any conversions already exist for this source collider.
       bool hasExistingConversions = HasAnyExistingConversions(
-        effectiveRoot, src, dbType,
+        effectiveRoot,
+        src,
+        dbType,
         new[] { mc1SphereType, mc1CapsuleType, mc1PlaneType },
-        new[] { mc2SphereType, mc2CapsuleType, mc2PlaneType });
+        new[] { mc2SphereType, mc2CapsuleType, mc2PlaneType }
+      );
       var convertButton = new Button { text = hasExistingConversions ? "Re-Convert" : "Convert" };
       convertButton.AddToClassList(CSS_CVR_FURY_BUTTON);
       convertButton.style.marginTop = new StyleLength(6);
@@ -399,9 +412,10 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       // Keep the Convert button enabled only while at least one enabled toggle is checked
       Action updateConvertButton = () =>
       {
-        bool any = (dbToggle.enabledSelf  && dbToggle.value)
-                || (mc1Toggle.enabledSelf && mc1Toggle.value)
-                || (mc2Toggle.enabledSelf && mc2Toggle.value);
+        bool any =
+          (dbToggle.enabledSelf && dbToggle.value)
+          || (mc1Toggle.enabledSelf && mc1Toggle.value)
+          || (mc2Toggle.enabledSelf && mc2Toggle.value);
         convertButton.SetEnabled(any);
       };
 
@@ -412,21 +426,21 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
 
       // Capture for click handler closure
       VisualElement capturedExistingContainer = existingContainer;
-      Transform capturedEffectiveRoot  = effectiveRoot;
-      Type capturedDbType              = dbType;
-      Type capturedMc1SphereType       = mc1SphereType;
-      Type capturedMc1CapsuleType      = mc1CapsuleType;
-      Type capturedMc1PlaneType        = mc1PlaneType;
-      Type capturedMc2SphereType       = mc2SphereType;
-      Type capturedMc2CapsuleType      = mc2CapsuleType;
-      Type capturedMc2PlaneType        = mc2PlaneType;
+      Transform capturedEffectiveRoot = effectiveRoot;
+      Type capturedDbType = dbType;
+      Type capturedMc1SphereType = mc1SphereType;
+      Type capturedMc1CapsuleType = mc1CapsuleType;
+      Type capturedMc1PlaneType = mc1PlaneType;
+      Type capturedMc2SphereType = mc2SphereType;
+      Type capturedMc2CapsuleType = mc2CapsuleType;
+      Type capturedMc2PlaneType = mc2PlaneType;
 
       convertButton.clicked += () =>
       {
         var converted = new List<string>();
-        var warnings  = new List<string>();
+        var warnings = new List<string>();
 
-        bool doDb  = dbToggle.enabledSelf  && dbToggle.value;
+        bool doDb = dbToggle.enabledSelf && dbToggle.value;
         bool doMc1 = mc1Toggle.enabledSelf && mc1Toggle.value;
         bool doMc2 = mc2Toggle.enabledSelf && mc2Toggle.value;
 
@@ -454,27 +468,35 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           string mc1Warning;
           string mc1Name = ConvertToMagicaCloth1(
             src,
-            capturedMc1SphereType, capturedMc1CapsuleType, capturedMc1PlaneType,
+            capturedMc1SphereType,
+            capturedMc1CapsuleType,
+            capturedMc1PlaneType,
             capturedEffectiveRoot,
             out mc1Warning
           );
           converted.Add(mc1Name);
-          if (mc1Warning != null) warnings.Add(mc1Warning);
+          if (mc1Warning != null)
+            warnings.Add(mc1Warning);
         }
 
         if (doMc2)
         {
           string mc2Name = ConvertToMagicaCloth2(
             src,
-            capturedMc2SphereType, capturedMc2CapsuleType, capturedMc2PlaneType,
+            capturedMc2SphereType,
+            capturedMc2CapsuleType,
+            capturedMc2PlaneType,
             capturedEffectiveRoot
           );
           converted.Add(mc2Name);
         }
 
         // Summary dialog
-        string msg = "Created child GameObjects under \"" + capturedEffectiveRoot.name + "\":\n"
-                   + string.Join(", ", converted.ToArray());
+        string msg =
+          "Created child GameObjects under \""
+          + capturedEffectiveRoot.name
+          + "\":\n"
+          + string.Join(", ", converted.ToArray());
         if (warnings.Count > 0)
         {
           msg += "\n\nWarnings:";
@@ -506,7 +528,17 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       root.Add(spacer2);
 
       // Remove button
-      var removeButton = new Button(() => DestroyImmediate(target))
+      // Also destroys any CVRFuryConvertedColliderMarker components that reference
+      // this source collider — once the source is gone the markers serve no purpose.
+      var removeButton = new Button(() =>
+      {
+        foreach (var marker in effectiveRoot.GetComponentsInChildren<CVRFuryConvertedColliderMarker>(true))
+        {
+          if (marker.sourceCollider == src)
+            DestroyImmediate(marker);
+        }
+        DestroyImmediate(target);
+      })
       {
         text = "Remove VRC PhysBone Collider Component"
       };
@@ -528,8 +560,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
     // set the (public) fields robustly through Unity's serialization layer.
     // -------------------------------------------------------------------------
 
-    private static void ConvertToDynamicBone(
-      VRCPhysBoneCollider src, Type dbType, Transform effectiveRoot)
+    private static void ConvertToDynamicBone(VRCPhysBoneCollider src, Type dbType, Transform effectiveRoot)
     {
       if (src.shapeType == VRCPhysBoneColliderBase.ShapeType.Plane)
       {
@@ -547,21 +578,25 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         newGO.transform.localRotation = src.rotation;
 
       var dbc = newGO.GetComponent(dbType) ?? ObjectFactory.AddComponent(newGO, dbType);
-      var so  = new SerializedObject(dbc);
+      var so = new SerializedObject(dbc);
 
       var radProp = so.FindProperty("m_Radius");
-      var hProp   = so.FindProperty("m_Height");
-      var cProp   = so.FindProperty("m_Center");
+      var hProp = so.FindProperty("m_Height");
+      var cProp = so.FindProperty("m_Center");
       var dirProp = so.FindProperty("m_Direction");
       var bndProp = so.FindProperty("m_Bound");
 
-      if (radProp != null) radProp.floatValue     = src.radius;
-      if (hProp   != null) hProp.floatValue       =
-        src.shapeType == VRCPhysBoneColliderBase.ShapeType.Capsule ? src.height : 0f;
-      if (cProp   != null) cProp.vector3Value     = src.position;
+      if (radProp != null)
+        radProp.floatValue = src.radius;
+      if (hProp != null)
+        hProp.floatValue = src.shapeType == VRCPhysBoneColliderBase.ShapeType.Capsule ? src.height : 0f;
+      if (cProp != null)
+        cProp.vector3Value = src.position;
       // Always use Y-axis (1) — VRC's natural capsule axis is Y; orientation is carried by localRotation.
-      if (dirProp != null) dirProp.enumValueIndex = 1;
-      if (bndProp != null) bndProp.enumValueIndex = src.insideBounds ? 1 : 0; // 0=Outside 1=Inside
+      if (dirProp != null)
+        dirProp.enumValueIndex = 1;
+      if (bndProp != null)
+        bndProp.enumValueIndex = src.insideBounds ? 1 : 0; // 0=Outside 1=Inside
 
       so.ApplyModifiedProperties();
       if (existingDbGO == null)
@@ -581,9 +616,12 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
 
     private static string ConvertToMagicaCloth1(
       VRCPhysBoneCollider src,
-      Type mc1SphereType, Type mc1CapsuleType, Type mc1PlaneType,
+      Type mc1SphereType,
+      Type mc1CapsuleType,
+      Type mc1PlaneType,
       Transform effectiveRoot,
-      out string warning)
+      out string warning
+    )
     {
       warning = null;
       string addedName;
@@ -593,7 +631,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         case VRCPhysBoneColliderBase.ShapeType.Sphere:
         {
           var existingMc1SphereGO = FindExistingConvertedGO(effectiveRoot, src, mc1SphereType);
-          var newGO = existingMc1SphereGO ?? CreateChildGameObject(src.gameObject.name + "_MC1SphereCollider", effectiveRoot);
+          var newGO =
+            existingMc1SphereGO ?? CreateChildGameObject(src.gameObject.name + "_MC1SphereCollider", effectiveRoot);
           var c = newGO.GetComponent(mc1SphereType) ?? ObjectFactory.AddComponent(newGO, mc1SphereType);
           SetProp(c, "Radius", src.radius);
           SetProp(c, "Center", src.position);
@@ -609,7 +648,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         case VRCPhysBoneColliderBase.ShapeType.Capsule:
         {
           var existingMc1CapsGO = FindExistingConvertedGO(effectiveRoot, src, mc1CapsuleType);
-          var newGO = existingMc1CapsGO ?? CreateChildGameObject(src.gameObject.name + "_MC1CapsuleCollider", effectiveRoot);
+          var newGO =
+            existingMc1CapsGO ?? CreateChildGameObject(src.gameObject.name + "_MC1CapsuleCollider", effectiveRoot);
           // VRC capsule extends along its Y-axis; apply VRC rotation to the child GO
           // so the GO's local Y aligns with the intended capsule axis.
           newGO.transform.localRotation = src.rotation;
@@ -626,12 +666,13 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           float mc1HalfLen = Mathf.Max(src.height / 2f - src.radius, 0f);
           float clampedLength = Mathf.Clamp(mc1HalfLen, 0f, 1f);
           if (mc1HalfLen > 1f)
-            warning = $"MC1 capsule half-length ({mc1HalfLen:F3}\u202fm) exceeds MC1 max (1.0\u202fm) and was clamped. Original VRC height: {src.height:F3}\u202fm.";
+            warning =
+              $"MC1 capsule half-length ({mc1HalfLen:F3}\u202fm) exceeds MC1 max (1.0\u202fm) and was clamped. Original VRC height: {src.height:F3}\u202fm.";
 
-          SetProp(c, "Length",      clampedLength);
+          SetProp(c, "Length", clampedLength);
           SetProp(c, "StartRadius", src.radius);
-          SetProp(c, "EndRadius",   src.radius);
-          SetProp(c, "Center",      src.position);
+          SetProp(c, "EndRadius", src.radius);
+          SetProp(c, "Center", src.position);
           if (existingMc1CapsGO == null)
           {
             var mc1CapsMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
@@ -644,7 +685,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         case VRCPhysBoneColliderBase.ShapeType.Plane:
         {
           var existingMc1PlaneGO = FindExistingConvertedGO(effectiveRoot, src, mc1PlaneType);
-          var newGO = existingMc1PlaneGO ?? CreateChildGameObject(src.gameObject.name + "_MC1PlaneCollider", effectiveRoot);
+          var newGO =
+            existingMc1PlaneGO ?? CreateChildGameObject(src.gameObject.name + "_MC1PlaneCollider", effectiveRoot);
           // MC1 uses the GO's Y+ axis as the plane normal — apply the VRC rotation so
           // the Y+ of this child GO matches the intended plane normal direction.
           newGO.transform.localRotation = src.rotation;
@@ -676,8 +718,11 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
 
     private static string ConvertToMagicaCloth2(
       VRCPhysBoneCollider src,
-      Type mc2SphereType, Type mc2CapsuleType, Type mc2PlaneType,
-      Transform effectiveRoot)
+      Type mc2SphereType,
+      Type mc2CapsuleType,
+      Type mc2PlaneType,
+      Transform effectiveRoot
+    )
     {
       string addedName;
 
@@ -686,7 +731,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         case VRCPhysBoneColliderBase.ShapeType.Sphere:
         {
           var existingMc2SphereGO = FindExistingConvertedGO(effectiveRoot, src, mc2SphereType);
-          var newGO = existingMc2SphereGO ?? CreateChildGameObject(src.gameObject.name + "_MC2SphereCollider", effectiveRoot);
+          var newGO =
+            existingMc2SphereGO ?? CreateChildGameObject(src.gameObject.name + "_MC2SphereCollider", effectiveRoot);
           var c = newGO.GetComponent(mc2SphereType) ?? ObjectFactory.AddComponent(newGO, mc2SphereType);
           SetField(c, "center", src.position);
 
@@ -709,7 +755,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         case VRCPhysBoneColliderBase.ShapeType.Capsule:
         {
           var existingMc2CapsGO = FindExistingConvertedGO(effectiveRoot, src, mc2CapsuleType);
-          var newGO = existingMc2CapsGO ?? CreateChildGameObject(src.gameObject.name + "_MC2CapsuleCollider", effectiveRoot);
+          var newGO =
+            existingMc2CapsGO ?? CreateChildGameObject(src.gameObject.name + "_MC2CapsuleCollider", effectiveRoot);
           // VRC capsule extends along its Y-axis; apply VRC rotation to the child GO
           // so the GO's local Y aligns with the intended capsule axis.
           newGO.transform.localRotation = src.rotation;
@@ -722,12 +769,10 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
             SetField(c, "direction", Enum.ToObject(dirEnumType, 1)); // 1 = Y-Axis
 
           SetField(c, "radiusSeparation", false); // uniform radius
-          SetField(c, "alignedOnCenter",  true);
+          SetField(c, "alignedOnCenter", true);
 
           // MagicaCapsuleCollider.SetSize(float startR, float endR, float length)
-          var setSizeThree = mc2CapsuleType.GetMethod(
-            "SetSize", new[] { typeof(float), typeof(float), typeof(float) }
-          );
+          var setSizeThree = mc2CapsuleType.GetMethod("SetSize", new[] { typeof(float), typeof(float), typeof(float) });
           if (setSizeThree != null)
             setSizeThree.Invoke(c, new object[] { src.radius, src.radius, src.height });
           else
@@ -745,7 +790,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         case VRCPhysBoneColliderBase.ShapeType.Plane:
         {
           var existingMc2PlaneGO = FindExistingConvertedGO(effectiveRoot, src, mc2PlaneType);
-          var newGO = existingMc2PlaneGO ?? CreateChildGameObject(src.gameObject.name + "_MC2PlaneCollider", effectiveRoot);
+          var newGO =
+            existingMc2PlaneGO ?? CreateChildGameObject(src.gameObject.name + "_MC2PlaneCollider", effectiveRoot);
           // MC2 uses the GO's Y+ axis as the plane normal — apply the VRC rotation so
           // the Y+ of this child GO matches the intended plane normal direction.
           newGO.transform.localRotation = src.rotation;
@@ -780,7 +826,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
   /// the source of the conversion, allowing the UI to filter the
   /// "Existing converted colliders" list to only show relevant entries.
   /// </summary>
-  [AddComponentMenu("")]  // hide from the Add Component menu
+  [AddComponentMenu("")] // hide from the Add Component menu
   public class CVRFuryConvertedColliderMarker : MonoBehaviour
   {
     public VRCPhysBoneCollider sourceCollider;
