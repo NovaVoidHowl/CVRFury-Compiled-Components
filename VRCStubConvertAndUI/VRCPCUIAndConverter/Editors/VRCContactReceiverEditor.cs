@@ -55,7 +55,8 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
 
       // Determine the parent transform for converted trigger
       // If rootTransform is set, use that; otherwise use the receiver's transform
-      var parentTransform = vrcReceiver.rootTransform != null ? vrcReceiver.rootTransform : receiverGameObject.transform;
+      var parentTransform =
+        vrcReceiver.rootTransform != null ? vrcReceiver.rootTransform : receiverGameObject.transform;
 
       // Create a new child GameObject for the trigger
       var triggerGameObject = new GameObject($"CVR_Trigger_From_{receiverGameObject.name}");
