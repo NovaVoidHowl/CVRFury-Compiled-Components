@@ -142,6 +142,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
 
     private static void PopulateExistingConversions(
       VisualElement container,
+      VRCPhysBoneCollider src,
       Transform effectiveRoot,
       Type dbType,
       Type[] mc1Types,
@@ -151,25 +152,37 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
 
       var found = new List<(string label, Component comp)>();
 
-      // DynamicBone
+      // DynamicBone — only include GOs whose marker references this src collider
       if (dbType != null)
         foreach (Component c in effectiveRoot.GetComponentsInChildren(dbType, true))
-          found.Add(($"DynamicBoneCollider on \"{c.gameObject.name}\"", c));
+        {
+          var marker = c.GetComponent<CVRFuryConvertedColliderMarker>();
+          if (marker != null && marker.sourceCollider == src)
+            found.Add(($"DynamicBoneCollider on \"{c.gameObject.name}\"", c));
+        }
 
-      // MagicaCloth 1
+      // MagicaCloth 1 — only include GOs whose marker references this src collider
       foreach (var t in mc1Types)
       {
         if (t == null) continue;
         foreach (Component c in effectiveRoot.GetComponentsInChildren(t, true))
-          found.Add(($"{t.Name} (MC1) on \"{c.gameObject.name}\"", c));
+        {
+          var marker = c.GetComponent<CVRFuryConvertedColliderMarker>();
+          if (marker != null && marker.sourceCollider == src)
+            found.Add(($"{t.Name} (MC1) on \"{c.gameObject.name}\"", c));
+        }
       }
 
-      // MagicaCloth 2
+      // MagicaCloth 2 — only include GOs whose marker references this src collider
       foreach (var t in mc2Types)
       {
         if (t == null) continue;
         foreach (Component c in effectiveRoot.GetComponentsInChildren(t, true))
-          found.Add(($"{t.Name} (MC2) on \"{c.gameObject.name}\"", c));
+        {
+          var marker = c.GetComponent<CVRFuryConvertedColliderMarker>();
+          if (marker != null && marker.sourceCollider == src)
+            found.Add(($"{t.Name} (MC2) on \"{c.gameObject.name}\"", c));
+        }
       }
 
       // Leave container empty (invisible) when nothing found
@@ -289,6 +302,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       root.Add(existingContainer);
       PopulateExistingConversions(
         existingContainer,
+        src,
         effectiveRoot,
         dbType,
         new[] { mc1SphereType, mc1CapsuleType, mc1PlaneType },
@@ -433,6 +447,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         // appear without the user needing to deselect and reselect the object.
         PopulateExistingConversions(
           capturedExistingContainer,
+          src,
           capturedEffectiveRoot,
           capturedDbType,
           new[] { capturedMc1SphereType, capturedMc1CapsuleType, capturedMc1PlaneType },
@@ -505,6 +520,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       if (bndProp != null) bndProp.enumValueIndex = src.insideBounds ? 1 : 0; // 0=Outside 1=Inside
 
       so.ApplyModifiedProperties();
+      var dbMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+      dbMarker.sourceCollider = src;
       EditorUtility.SetDirty(newGO);
     }
 
@@ -532,6 +549,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           var c = ObjectFactory.AddComponent(newGO, mc1SphereType);
           SetProp(c, "Radius", src.radius);
           SetProp(c, "Center", src.position);
+          var mc1SphereMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+          mc1SphereMarker.sourceCollider = src;
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaSphereCollider (MC1)";
           break;
@@ -561,6 +580,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           SetProp(c, "StartRadius", src.radius);
           SetProp(c, "EndRadius",   src.radius);
           SetProp(c, "Center",      src.position);
+          var mc1CapsMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+          mc1CapsMarker.sourceCollider = src;
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaCapsuleCollider (MC1)";
           break;
@@ -573,6 +594,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           newGO.transform.localRotation = src.rotation;
           var c = ObjectFactory.AddComponent(newGO, mc1PlaneType);
           SetProp(c, "Center", src.position);
+          var mc1PlaneMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+          mc1PlaneMarker.sourceCollider = src;
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaPlaneCollider (MC1)";
           break;
@@ -614,6 +637,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           else
             SetField(c, "size", new Vector3(src.radius, 0f, 0f)); // fallback
 
+          var mc2SphereMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+          mc2SphereMarker.sourceCollider = src;
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaSphereCollider (MC2)";
           break;
@@ -644,6 +669,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           else
             SetField(c, "size", new Vector3(src.radius, src.radius, src.height)); // fallback
 
+          var mc2CapsMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+          mc2CapsMarker.sourceCollider = src;
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaCapsuleCollider (MC2)";
           break;
@@ -656,6 +683,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           newGO.transform.localRotation = src.rotation;
           var c = ObjectFactory.AddComponent(newGO, mc2PlaneType);
           SetField(c, "center", src.position);
+          var mc2PlaneMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+          mc2PlaneMarker.sourceCollider = src;
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaPlaneCollider (MC2)";
           break;
@@ -666,5 +695,23 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
 
       return addedName;
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Marker component — tracks which VRCPhysBoneCollider owns each converted
+  // collider child GO, so the Inspector UI can filter to show only the
+  // conversions owned by the currently-inspected collider component.
+  // -------------------------------------------------------------------------
+
+  /// <summary>
+  /// Lightweight marker attached to every converted-collider child GameObject.
+  /// The sourceCollider field points back to the VRCPhysBoneCollider that was
+  /// the source of the conversion, allowing the UI to filter the
+  /// "Existing converted colliders" list to only show relevant entries.
+  /// </summary>
+  [AddComponentMenu("")]  // hide from the Add Component menu
+  public class CVRFuryConvertedColliderMarker : MonoBehaviour
+  {
+    public VRCPhysBoneCollider sourceCollider;
   }
 }

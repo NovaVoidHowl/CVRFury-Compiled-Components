@@ -4,7 +4,7 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors.Common
 {
   public static class UIVersion
   {
-    private static readonly Version _version = new Version(2, 1, 0);
+    private static readonly Version _version = new Version(2, 1, 1);
 
     public static string CurrentVersion => _version.ToString();
     public static Version AsVersion => _version;
