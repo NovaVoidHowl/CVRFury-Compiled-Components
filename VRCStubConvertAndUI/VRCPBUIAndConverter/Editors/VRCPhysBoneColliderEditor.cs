@@ -133,6 +133,24 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
     }
 
     // -------------------------------------------------------------------------
+    // Find an existing converted-collider GO owned by the given source collider
+    // that already has a component of targetType. Returns null if none found.
+    // Used by the conversion methods to update in place instead of duplicating.
+    // -------------------------------------------------------------------------
+
+    private static GameObject FindExistingConvertedGO(
+      Transform effectiveRoot, VRCPhysBoneCollider src, Type targetType)
+    {
+      foreach (Component c in effectiveRoot.GetComponentsInChildren(targetType, true))
+      {
+        var marker = c.GetComponent<CVRFuryConvertedColliderMarker>();
+        if (marker != null && marker.sourceCollider == src)
+          return c.gameObject;
+      }
+      return null;
+    }
+
+    // -------------------------------------------------------------------------
     // Existing-conversions UI section
     // Clears then repopulates a persistent container with clickable navigation
     // buttons for each already-converted collider found under effectiveRoot.
@@ -494,7 +512,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
         return;
       }
 
-      var newGO = CreateChildGameObject(src.gameObject.name + "_DBCollider", effectiveRoot);
+      var existingDbGO = FindExistingConvertedGO(effectiveRoot, src, dbType);
+      var newGO = existingDbGO ?? CreateChildGameObject(src.gameObject.name + "_DBCollider", effectiveRoot);
 
       // VRC capsule extends along its Y-axis; apply the VRC rotation to the child GO
       // so that direction Y on the DynamicBoneCollider aligns with the intended capsule axis.
@@ -502,8 +521,8 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       if (src.shapeType == VRCPhysBoneColliderBase.ShapeType.Capsule)
         newGO.transform.localRotation = src.rotation;
 
-      var dbc   = ObjectFactory.AddComponent(newGO, dbType);
-      var so    = new SerializedObject(dbc);
+      var dbc = newGO.GetComponent(dbType) ?? ObjectFactory.AddComponent(newGO, dbType);
+      var so  = new SerializedObject(dbc);
 
       var radProp = so.FindProperty("m_Radius");
       var hProp   = so.FindProperty("m_Height");
@@ -520,8 +539,11 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       if (bndProp != null) bndProp.enumValueIndex = src.insideBounds ? 1 : 0; // 0=Outside 1=Inside
 
       so.ApplyModifiedProperties();
-      var dbMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
-      dbMarker.sourceCollider = src;
+      if (existingDbGO == null)
+      {
+        var dbMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+        dbMarker.sourceCollider = src;
+      }
       EditorUtility.SetDirty(newGO);
     }
 
@@ -545,23 +567,28 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       {
         case VRCPhysBoneColliderBase.ShapeType.Sphere:
         {
-          var newGO = CreateChildGameObject(src.gameObject.name + "_MC1SphereCollider", effectiveRoot);
-          var c = ObjectFactory.AddComponent(newGO, mc1SphereType);
+          var existingMc1SphereGO = FindExistingConvertedGO(effectiveRoot, src, mc1SphereType);
+          var newGO = existingMc1SphereGO ?? CreateChildGameObject(src.gameObject.name + "_MC1SphereCollider", effectiveRoot);
+          var c = newGO.GetComponent(mc1SphereType) ?? ObjectFactory.AddComponent(newGO, mc1SphereType);
           SetProp(c, "Radius", src.radius);
           SetProp(c, "Center", src.position);
-          var mc1SphereMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
-          mc1SphereMarker.sourceCollider = src;
+          if (existingMc1SphereGO == null)
+          {
+            var mc1SphereMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+            mc1SphereMarker.sourceCollider = src;
+          }
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaSphereCollider (MC1)";
           break;
         }
         case VRCPhysBoneColliderBase.ShapeType.Capsule:
         {
-          var newGO = CreateChildGameObject(src.gameObject.name + "_MC1CapsuleCollider", effectiveRoot);
+          var existingMc1CapsGO = FindExistingConvertedGO(effectiveRoot, src, mc1CapsuleType);
+          var newGO = existingMc1CapsGO ?? CreateChildGameObject(src.gameObject.name + "_MC1CapsuleCollider", effectiveRoot);
           // VRC capsule extends along its Y-axis; apply VRC rotation to the child GO
           // so the GO's local Y aligns with the intended capsule axis.
           newGO.transform.localRotation = src.rotation;
-          var c = ObjectFactory.AddComponent(newGO, mc1CapsuleType);
+          var c = newGO.GetComponent(mc1CapsuleType) ?? ObjectFactory.AddComponent(newGO, mc1CapsuleType);
 
           // AxisMode: always Y (1) — VRC's natural capsule axis is Y; orientation carried by GO's rotation.
           var axisEnumType = GetNestedTypeDeep(mc1CapsuleType, "Axis");
@@ -580,22 +607,29 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           SetProp(c, "StartRadius", src.radius);
           SetProp(c, "EndRadius",   src.radius);
           SetProp(c, "Center",      src.position);
-          var mc1CapsMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
-          mc1CapsMarker.sourceCollider = src;
+          if (existingMc1CapsGO == null)
+          {
+            var mc1CapsMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+            mc1CapsMarker.sourceCollider = src;
+          }
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaCapsuleCollider (MC1)";
           break;
         }
         case VRCPhysBoneColliderBase.ShapeType.Plane:
         {
-          var newGO = CreateChildGameObject(src.gameObject.name + "_MC1PlaneCollider", effectiveRoot);
+          var existingMc1PlaneGO = FindExistingConvertedGO(effectiveRoot, src, mc1PlaneType);
+          var newGO = existingMc1PlaneGO ?? CreateChildGameObject(src.gameObject.name + "_MC1PlaneCollider", effectiveRoot);
           // MC1 uses the GO's Y+ axis as the plane normal — apply the VRC rotation so
           // the Y+ of this child GO matches the intended plane normal direction.
           newGO.transform.localRotation = src.rotation;
-          var c = ObjectFactory.AddComponent(newGO, mc1PlaneType);
+          var c = newGO.GetComponent(mc1PlaneType) ?? ObjectFactory.AddComponent(newGO, mc1PlaneType);
           SetProp(c, "Center", src.position);
-          var mc1PlaneMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
-          mc1PlaneMarker.sourceCollider = src;
+          if (existingMc1PlaneGO == null)
+          {
+            var mc1PlaneMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+            mc1PlaneMarker.sourceCollider = src;
+          }
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaPlaneCollider (MC1)";
           break;
@@ -626,8 +660,9 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
       {
         case VRCPhysBoneColliderBase.ShapeType.Sphere:
         {
-          var newGO = CreateChildGameObject(src.gameObject.name + "_MC2SphereCollider", effectiveRoot);
-          var c = ObjectFactory.AddComponent(newGO, mc2SphereType);
+          var existingMc2SphereGO = FindExistingConvertedGO(effectiveRoot, src, mc2SphereType);
+          var newGO = existingMc2SphereGO ?? CreateChildGameObject(src.gameObject.name + "_MC2SphereCollider", effectiveRoot);
+          var c = newGO.GetComponent(mc2SphereType) ?? ObjectFactory.AddComponent(newGO, mc2SphereType);
           SetField(c, "center", src.position);
 
           // MagicaSphereCollider.SetSize(float radius) sets size = new Vector3(r,0,0)
@@ -637,19 +672,23 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           else
             SetField(c, "size", new Vector3(src.radius, 0f, 0f)); // fallback
 
-          var mc2SphereMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
-          mc2SphereMarker.sourceCollider = src;
+          if (existingMc2SphereGO == null)
+          {
+            var mc2SphereMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+            mc2SphereMarker.sourceCollider = src;
+          }
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaSphereCollider (MC2)";
           break;
         }
         case VRCPhysBoneColliderBase.ShapeType.Capsule:
         {
-          var newGO = CreateChildGameObject(src.gameObject.name + "_MC2CapsuleCollider", effectiveRoot);
+          var existingMc2CapsGO = FindExistingConvertedGO(effectiveRoot, src, mc2CapsuleType);
+          var newGO = existingMc2CapsGO ?? CreateChildGameObject(src.gameObject.name + "_MC2CapsuleCollider", effectiveRoot);
           // VRC capsule extends along its Y-axis; apply VRC rotation to the child GO
           // so the GO's local Y aligns with the intended capsule axis.
           newGO.transform.localRotation = src.rotation;
-          var c = ObjectFactory.AddComponent(newGO, mc2CapsuleType);
+          var c = newGO.GetComponent(mc2CapsuleType) ?? ObjectFactory.AddComponent(newGO, mc2CapsuleType);
           SetField(c, "center", src.position);
 
           // Direction: always Y (1) — VRC's natural capsule axis is Y; orientation carried by GO's rotation.
@@ -669,22 +708,29 @@ namespace VRC.SDK3.Dynamics.PhysBone.Editors
           else
             SetField(c, "size", new Vector3(src.radius, src.radius, src.height)); // fallback
 
-          var mc2CapsMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
-          mc2CapsMarker.sourceCollider = src;
+          if (existingMc2CapsGO == null)
+          {
+            var mc2CapsMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+            mc2CapsMarker.sourceCollider = src;
+          }
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaCapsuleCollider (MC2)";
           break;
         }
         case VRCPhysBoneColliderBase.ShapeType.Plane:
         {
-          var newGO = CreateChildGameObject(src.gameObject.name + "_MC2PlaneCollider", effectiveRoot);
+          var existingMc2PlaneGO = FindExistingConvertedGO(effectiveRoot, src, mc2PlaneType);
+          var newGO = existingMc2PlaneGO ?? CreateChildGameObject(src.gameObject.name + "_MC2PlaneCollider", effectiveRoot);
           // MC2 uses the GO's Y+ axis as the plane normal — apply the VRC rotation so
           // the Y+ of this child GO matches the intended plane normal direction.
           newGO.transform.localRotation = src.rotation;
-          var c = ObjectFactory.AddComponent(newGO, mc2PlaneType);
+          var c = newGO.GetComponent(mc2PlaneType) ?? ObjectFactory.AddComponent(newGO, mc2PlaneType);
           SetField(c, "center", src.position);
-          var mc2PlaneMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
-          mc2PlaneMarker.sourceCollider = src;
+          if (existingMc2PlaneGO == null)
+          {
+            var mc2PlaneMarker = newGO.AddComponent<CVRFuryConvertedColliderMarker>();
+            mc2PlaneMarker.sourceCollider = src;
+          }
           EditorUtility.SetDirty(newGO);
           addedName = "MagicaPlaneCollider (MC2)";
           break;
