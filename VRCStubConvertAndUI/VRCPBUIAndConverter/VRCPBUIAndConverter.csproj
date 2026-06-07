@@ -56,11 +56,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\APIVersion.cs" />
     <Compile Include="Common\UIVersion.cs" />
+    <Compile Include="Conversion\VRCPhysBoneColliderConversionActions.cs" />
+    <Compile Include="Conversion\VRCPhysBoneColliderConversionTypes.cs" />
     <Compile Include="Editors\VRCPhysBoneEditor.cs" />
     <Compile Include="Editors\VRCPhysBoneColliderEditor.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Common\" />
+    <Folder Include="Conversion\" />
     <Folder Include="Editors\" />
     <Folder Include="Resources\" />
   </ItemGroup>
