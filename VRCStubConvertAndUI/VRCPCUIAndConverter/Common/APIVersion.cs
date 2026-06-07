@@ -1,16 +1,22 @@
 using System;
 
-namespace VRC.SDK3.Dynamics.Constraint.Editors.Common
+namespace uk.novavoidhowl.dev.cvrfury.compiled.vrccontacts
 {
-  public static class UIVersion
+  public static class APIVersion
   {
-    private static readonly Version _version = new Version(2, 1, 0);
+    private static readonly Version _version = new Version(1, 0, 0);
 
     // For serialization and display
-    public static string CurrentVersion => _version.ToString();
+    public static string CurrentVersion
+    {
+      get { return _version.ToString(); }
+    }
 
     // For version comparison
-    public static Version AsVersion => _version;
+    public static Version AsVersion
+    {
+      get { return _version; }
+    }
 
     // Helper method for version checking
     public static bool IsVersionAtLeast(Version otherVersion)

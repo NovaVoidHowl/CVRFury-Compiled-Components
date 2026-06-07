@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.Contact.Editors.Common;
+using uk.novavoidhowl.dev.cvrfury.compiled.vrccontacts;
 using uk.novavoidhowl.dev.cvrfury.VRCstub.Common; // Shared UI styles
 
 namespace VRC.SDK3.Dynamics.Contact.Editors
@@ -40,114 +41,26 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
     /// </summary>
     private void ConvertVRCContactSenderToCVR()
     {
-      var vrcSender = (VRCContactSender)target;
-      var senderGameObject = vrcSender.gameObject;
-
-      // Find required CVR component type using reflection
-      var cvrPointerType = FindRequiredCVRPointerType();
-
-      if (cvrPointerType == null)
-      {
-        Debug.LogError("Could not find CVRPointer component type. Make sure CVR CCK is imported.");
-        return;
-      }
-
-      // Create a child GameObject for each collision tag
-      for (int i = 0; i < vrcSender.collisionTags.Count; i++)
-      {
-        var collisionTag = vrcSender.collisionTags[i];
-        var pointerGameObject = new GameObject($"CVR_Pointer{i + 1}_From_{senderGameObject.name}");
-        pointerGameObject.transform.SetParent(senderGameObject.transform, false);
-
-        // Add appropriate collider based on shape type
-        AddColliderBasedOnShape(vrcSender, pointerGameObject);
-
-        // Add CVR pointer component for this collision tag
-        var cvrPointer = pointerGameObject.AddComponent(cvrPointerType);
-        SetFieldOrProperty(cvrPointerType, cvrPointer, "type", collisionTag);
-      }
-
-      ShowConversionCompleteDialog();
-
-      // Mark objects as dirty for saving
-      EditorUtility.SetDirty(senderGameObject);
-
-      // Remove the original VRC component
-      DestroyImmediate(vrcSender);
-    }
-
-    /// <summary>
-    /// Finds the CVR Pointer component type using reflection.
-    /// </summary>
-    private static Type FindRequiredCVRPointerType()
-    {
-      return AppDomain.CurrentDomain
-        .GetAssemblies()
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.Name == "CVRPointer");
-    }
-
-    /// <summary>
-    /// Adds the appropriate collider component based on the VRC sender's shape type.
-    /// </summary>
-    private static void AddColliderBasedOnShape(VRCContactSender vrcSender, GameObject pointerGameObject)
-    {
-      switch (vrcSender.shapeType)
-      {
-        case VRC.Dynamics.ContactBase.ShapeType.Sphere:
-          var sphereCollider = pointerGameObject.AddComponent<SphereCollider>();
-          sphereCollider.radius = vrcSender.radius;
-          sphereCollider.isTrigger = true;
-          pointerGameObject.transform.localPosition = vrcSender.position;
-          break;
-
-        case VRC.Dynamics.ContactBase.ShapeType.Capsule:
-          var capsuleCollider = pointerGameObject.AddComponent<CapsuleCollider>();
-          capsuleCollider.radius = vrcSender.radius;
-          capsuleCollider.height = vrcSender.height;
-          capsuleCollider.direction = 1;
-          capsuleCollider.isTrigger = true;
-          pointerGameObject.transform.localPosition = vrcSender.position;
-          pointerGameObject.transform.localRotation = vrcSender.rotation;
-          break;
-
-        default:
-          Debug.LogError($"Unknown shape type {vrcSender.shapeType}");
-          break;
-      }
-    }
-
-    /// <summary>
-    /// Sets a field or property value on an object using reflection.
-    /// </summary>
-    private static void SetFieldOrProperty(Type type, object instance, string memberName, object value)
-    {
-      var field = type.GetField(memberName);
-      if (field != null)
-      {
-        field.SetValue(instance, value);
-        return;
-      }
-
-      var property = type.GetProperty(memberName);
-      if (property != null)
-      {
-        property.SetValue(instance, value, null);
-      }
-    }
-
-    /// <summary>
-    /// Shows the conversion complete dialog to the user.
-    /// </summary>
-    private static void ShowConversionCompleteDialog()
-    {
-      EditorUtility.DisplayDialog(
-        "Contact Sender Conversion Complete",
-        "The VRC Contact Sender has been successfully converted to CVR Pointer(s). "
-          + "The original component has been removed and new child GameObject(s) with CVR pointers have been created "
-          + "(one for each collision tag).",
-        "OK"
+      var result = VRCContactConversionActions.ConvertSender(
+        (VRCContactSender)target,
+        VRCContactConversionOptions.ForInspector()
       );
+      ShowConversionResultDialog(result);
+    }
+
+    private static void ShowConversionResultDialog(VRCContactConversionResult result)
+    {
+      var message = result.SummaryMessage;
+      if (result.Messages.Count > 0)
+      {
+        message += "\n\nMessages:";
+        foreach (var conversionMessage in result.Messages)
+        {
+          message += "\n- " + conversionMessage.Text;
+        }
+      }
+
+      EditorUtility.DisplayDialog(result.SummaryTitle, message, "OK");
     }
 
     public override VisualElement CreateInspectorGUI()
@@ -159,7 +72,9 @@ namespace VRC.SDK3.Dynamics.Contact.Editors
       stubVersionLabel.AddToClassList(STUB_VERSION);
       root.Add(stubVersionLabel);
 
-      var uiVersionLabel = new Label($"UI Version: {UIVersion.CurrentVersion}");
+      var uiVersionLabel = new Label(
+        $"UI Version: {UIVersion.CurrentVersion} | API Version: {VRCContactConversionActions.ApiVersion}"
+      );
       uiVersionLabel.AddToClassList(UI_VERSION);
       root.Add(uiVersionLabel);
 

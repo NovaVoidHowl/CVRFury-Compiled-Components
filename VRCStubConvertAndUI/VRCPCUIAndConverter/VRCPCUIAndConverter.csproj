@@ -57,12 +57,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Common\APIVersion.cs" />
     <Compile Include="Common\UIVersion.cs" />
+    <Compile Include="Conversion\VRCContactConversionActions.cs" />
+    <Compile Include="Conversion\VRCContactConversionTypes.cs" />
     <Compile Include="Editors\VRCContactSenderEditor.cs" />
     <Compile Include="Editors\VRCContactReceiverEditor.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Common\" />
+    <Folder Include="Conversion\" />
     <Folder Include="Editors\" />
     <Folder Include="Resources\" />
   </ItemGroup>
