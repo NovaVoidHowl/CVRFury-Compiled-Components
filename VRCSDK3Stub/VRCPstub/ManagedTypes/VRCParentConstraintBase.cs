@@ -20,7 +20,12 @@ namespace VRC.Dynamics.ManagedTypes
 
     public sealed override bool AffectsAnyAxis()
     {
-      return AffectsPositionX || AffectsPositionY || AffectsPositionZ || AffectsRotationX || AffectsRotationY || AffectsRotationZ;
+      return AffectsPositionX
+        || AffectsPositionY
+        || AffectsPositionZ
+        || AffectsRotationX
+        || AffectsRotationY
+        || AffectsRotationZ;
     }
   }
 }

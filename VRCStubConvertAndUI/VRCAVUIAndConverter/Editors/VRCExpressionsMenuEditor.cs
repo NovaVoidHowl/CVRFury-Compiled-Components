@@ -422,9 +422,7 @@ namespace VRC.SDK3.Avatars.Editors
           var machineName = GetMachineName(control);
           if (!string.IsNullOrEmpty(machineName) && !parameterInfo.ContainsKey(machineName))
           {
-            missingParameters.Add(
-              $"• {controlPath} ({control.type}) - Parameter: {control.parameter?.name}"
-            );
+            missingParameters.Add($"• {controlPath} ({control.type}) - Parameter: {control.parameter?.name}");
           }
         }
       }
@@ -745,7 +743,11 @@ namespace VRC.SDK3.Avatars.Editors
           if (control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
           {
             menuItem = ConvertSubMenuControl(
-              control, parameterStores, cvrMenuStoreType, visited, ref subMenusConverted
+              control,
+              parameterStores,
+              cvrMenuStoreType,
+              visited,
+              ref subMenusConverted
             );
           }
           else
@@ -772,7 +774,9 @@ namespace VRC.SDK3.Avatars.Editors
         // Log how many items were collected before setting the field
         var countProp = menuItemsListType.GetProperty("Count");
         int itemCount = countProp != null ? (int)countProp.GetValue(menuItemsList) : -1;
-        UnityEngine.Debug.Log($"[CVRFury Converter] ConvertMenuControls: setting {itemCount} menu item(s) on '{cvrMenuStore.name}'");
+        UnityEngine.Debug.Log(
+          $"[CVRFury Converter] ConvertMenuControls: setting {itemCount} menu item(s) on '{cvrMenuStore.name}'"
+        );
 
         // Set the menuItems field
         menuItemsField.SetValue(cvrMenuStore, menuItemsList);
@@ -797,9 +801,7 @@ namespace VRC.SDK3.Avatars.Editors
     {
       if (control.subMenu == null)
       {
-        UnityEngine.Debug.LogWarning(
-          $"SubMenu control '{control.name}' has no linked sub-menu asset — skipping"
-        );
+        UnityEngine.Debug.LogWarning($"SubMenu control '{control.name}' has no linked sub-menu asset — skipping");
         return null;
       }
 
@@ -814,9 +816,7 @@ namespace VRC.SDK3.Avatars.Editors
       var subAssetPath = AssetDatabase.GetAssetPath(control.subMenu);
       if (string.IsNullOrEmpty(subAssetPath))
       {
-        UnityEngine.Debug.LogWarning(
-          $"Sub-menu asset for '{control.name}' is not saved to disk — skipping"
-        );
+        UnityEngine.Debug.LogWarning($"Sub-menu asset for '{control.name}' is not saved to disk — skipping");
         return null;
       }
 
@@ -849,9 +849,7 @@ namespace VRC.SDK3.Avatars.Editors
 
       if (subMenuParamType == null)
       {
-        UnityEngine.Debug.LogError(
-          "subMenuParameter type not found — make sure CVRFury runtime is up to date"
-        );
+        UnityEngine.Debug.LogError("subMenuParameter type not found — make sure CVRFury runtime is up to date");
         return null;
       }
 
@@ -859,7 +857,9 @@ namespace VRC.SDK3.Avatars.Editors
       SetField(subMenuParam, "name", control.name.Trim());
       SetField(subMenuParam, "subMenuStore", childStore);
 
-      UnityEngine.Debug.Log($"[CVRFury Converter] Created subMenuParameter '{control.name.Trim()}' → '{childStore?.name}'");
+      UnityEngine.Debug.Log(
+        $"[CVRFury Converter] Created subMenuParameter '{control.name.Trim()}' → '{childStore?.name}'"
+      );
 
       return subMenuParam;
     }
@@ -974,7 +974,9 @@ namespace VRC.SDK3.Avatars.Editors
         case VRCExpressionsMenu.Control.ControlType.SubMenu:
           // SubMenu controls are handled before ConvertControl is called (in ConvertMenuControls).
           // If we somehow reach here, log and skip.
-          UnityEngine.Debug.LogWarning($"SubMenu control '{control.name}' reached ConvertControl unexpectedly — skipping");
+          UnityEngine.Debug.LogWarning(
+            $"SubMenu control '{control.name}' reached ConvertControl unexpectedly — skipping"
+          );
           return null;
 
         case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
